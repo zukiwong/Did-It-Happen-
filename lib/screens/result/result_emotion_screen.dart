@@ -1,79 +1,53 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_theme.dart';
 import '../../constants/routes.dart';
 
-/// Post-report screen for "Did I cheat?" entry — emotional support.
-/// Per UX doc: "情绪支持" — emotion mapping, self-state recognition, common phases.
-/// No judgment, no advice. Reflection only.
 class ResultEmotionScreen extends StatelessWidget {
   const ResultEmotionScreen({super.key});
 
   static const _phases = [
-    _Phase(
-      label: 'Ambivalence',
-      detail:
-          'Wanting two things at once. This is one of the most common emotional states — not a sign of weakness.',
-    ),
-    _Phase(
-      label: 'Compartmentalization',
-      detail:
-          'Separating parts of life to avoid conflict. Often leads to increasing internal pressure over time.',
-    ),
-    _Phase(
-      label: 'Guilt without action',
-      detail:
-          'Feeling something is wrong, but not yet able to name it or address it.',
-    ),
-    _Phase(
-      label: 'Reframing',
-      detail:
-          'Rationalizing behavior to reduce dissonance. A very human response — and a signal worth examining.',
-    ),
-    _Phase(
-      label: 'Clarity seeking',
-      detail:
-          'Arriving here means part of you wants to understand what is actually happening.',
-    ),
+    _Phase(label: '矛盾感', detail: '同时想要两件事。这是最常见的情绪状态之一，不是软弱的表现。'),
+    _Phase(label: '隔离化', detail: '把生活的各部分分开，以避免冲突。通常会随着时间推移带来越来越大的内在压力。'),
+    _Phase(label: '内疚但未行动', detail: '感觉某件事不对，但还无法命名或处理它。'),
+    _Phase(label: '合理化', detail: '通过重新诠释行为来减少内心矛盾。这是非常人性化的反应，也是值得审视的信号。'),
+    _Phase(label: '寻求清晰', detail: '走到这一步，意味着你内心的某部分想要真正理解正在发生什么。'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CupertinoPageScaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      navigationBar: CupertinoNavigationBar(
         backgroundColor: AppColors.background,
+        border: const Border(bottom: BorderSide(color: AppColors.divider, width: 0.5)),
         leading: GestureDetector(
           onTap: () => context.go(Routes.report),
-          child: const Icon(Icons.arrow_back_ios, size: 18),
+          child: const Icon(CupertinoIcons.back, color: AppColors.textPrimary, size: 22),
+        ),
+        middle: const Text(
+          '情绪支持',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 48),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Emotional\nsupport',
-                style: Theme.of(context).textTheme.displayLarge,
+      child: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.xxl),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const Text('常见心理阶段', style: AppText.title),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text('这些是该情境下常见的心理状态。这里没有评判。', style: AppText.bodySecondary),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._phases.asMap().entries.map((e) =>
+                      _PhaseRow(index: e.key + 1, phase: e.value)),
+                ]),
               ),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Common psychological states in this situation. There is no judgment here.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-
-              const SizedBox(height: 40),
-
-              ..._phases.asMap().entries.map((e) => _PhaseRow(
-                    index: e.key + 1,
-                    phase: e.value,
-                  )),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -89,38 +63,36 @@ class _Phase {
 class _PhaseRow extends StatelessWidget {
   final int index;
   final _Phase phase;
-
   const _PhaseRow({required this.index, required this.phase});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Index number
           SizedBox(
             width: 28,
             child: Text(
               '$index',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.risk,
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: const TextStyle(
+                fontFamily: '.SF Pro Text',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.risk,
+              ),
             ),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(phase.label,
-                    style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 6),
-                Text(phase.detail,
-                    style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 24),
-                const Divider(color: AppColors.divider, height: 1),
+                Text(phase.label, style: AppText.body),
+                const SizedBox(height: 4),
+                Text(phase.detail, style: AppText.bodySecondary),
+                const SizedBox(height: AppSpacing.lg),
+                Container(height: 0.5, color: AppColors.divider),
               ],
             ),
           ),

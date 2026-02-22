@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_theme.dart';
@@ -10,7 +10,6 @@ import '../../providers/checklist_provider.dart';
 class ChecklistScreen extends ConsumerWidget {
   const ChecklistScreen({super.key});
 
-  // Phase 1 items only
   List<ChecklistItem> get _phase1 =>
       kChecklistItems.where((i) => i.phase == 1).toList();
 
@@ -19,46 +18,36 @@ class ChecklistScreen extends ConsumerWidget {
     final answers = ref.watch(checklistProvider);
     final items = _phase1;
 
-    return Scaffold(
+    return CupertinoPageScaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      navigationBar: const CupertinoNavigationBar(
         backgroundColor: AppColors.background,
-        leading: GestureDetector(
-          onTap: () => context.go(Routes.home),
-          child: const Icon(Icons.arrow_back_ios, size: 18),
+        border: Border(bottom: BorderSide(color: AppColors.divider, width: 0.5)),
+        middle: Text(
+          '阶段 1 / 3',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 15, fontWeight: FontWeight.w400),
         ),
+        automaticallyImplyLeading: false,
       ),
-      body: SafeArea(
+      child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Progress bar
-            _ProgressBar(phase: 1),
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              child: Text(
-                'Relationship Signals',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+            _PhaseBar(phase: 1),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xs),
+              child: Text('关系信号', style: AppText.title),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Text(
-                'Select all that have changed noticeably.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+              child: Text('选择所有明显发生变化的项目。', style: AppText.bodySecondary),
             ),
-
-            // Question list
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 itemCount: items.length,
-                separatorBuilder: (_, _) => const Divider(
-                  color: AppColors.divider,
-                  height: 1,
-                ),
+                separatorBuilder: (_, _) => Container(height: 0.5, color: AppColors.divider),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final flagged = answers[item.id] ?? false;
@@ -71,31 +60,26 @@ class ChecklistScreen extends ConsumerWidget {
                 },
               ),
             ),
-
-            // Continue button
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-              child: SizedBox(
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: () {
-                    // Save phase1 answers as-is for unanswered (default false)
-                    context.go('${Routes.checklist}/phase2');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    decoration: BoxDecoration(
-                      color: AppColors.textPrimary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Continue',
-                      style: TextStyle(
-                        color: AppColors.background,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xxl),
+              child: GestureDetector(
+                onTap: () => context.go('${Routes.checklist}/phase2'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '继续',
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.background,
                     ),
                   ),
                 ),
@@ -112,12 +96,7 @@ class _CheckRow extends StatelessWidget {
   final ChecklistItem item;
   final bool flagged;
   final ValueChanged<bool> onToggle;
-
-  const _CheckRow({
-    required this.item,
-    required this.flagged,
-    required this.onToggle,
-  });
+  const _CheckRow({required this.item, required this.flagged, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -125,35 +104,32 @@ class _CheckRow extends StatelessWidget {
       onTap: () => onToggle(!flagged),
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 item.question,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: flagged
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                    ),
+                style: AppText.body.copyWith(
+                  color: flagged ? AppColors.textPrimary : AppColors.textSecondary,
+                ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: flagged ? AppColors.risk : Colors.transparent,
+                color: flagged ? AppColors.risk : CupertinoColors.transparent,
                 border: Border.all(
-                  color:
-                      flagged ? AppColors.risk : AppColors.textMuted,
+                  color: flagged ? AppColors.risk : AppColors.textMuted,
                   width: 1.5,
                 ),
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: flagged
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  ? const Icon(CupertinoIcons.checkmark, size: 13, color: CupertinoColors.white)
                   : null,
             ),
           ],
@@ -163,22 +139,20 @@ class _CheckRow extends StatelessWidget {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
+class _PhaseBar extends StatelessWidget {
   final int phase;
-  const _ProgressBar({required this.phase});
-
+  const _PhaseBar({required this.phase});
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
       child: Row(
         children: List.generate(3, (i) {
-          final active = i < phase;
           return Expanded(
             child: Container(
               height: 2,
               margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
-              color: active ? AppColors.textPrimary : AppColors.divider,
+              color: i < phase ? AppColors.textPrimary : AppColors.divider,
             ),
           );
         }),

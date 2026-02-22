@@ -1,80 +1,67 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_theme.dart';
 import '../../constants/routes.dart';
 
-/// Couple mode entry screen (paid feature).
-/// Per UX doc: not shown at main entry — accessible from report bottom or settings.
-/// Flow: create session → invite code → both fill → view compared result.
 class CoupleModeScreen extends StatelessWidget {
   const CoupleModeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CupertinoPageScaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      navigationBar: CupertinoNavigationBar(
         backgroundColor: AppColors.background,
+        border: const Border(bottom: BorderSide(color: AppColors.divider, width: 0.5)),
         leading: GestureDetector(
           onTap: () => context.go(Routes.report),
-          child: const Icon(Icons.arrow_back_ios, size: 18),
+          child: const Icon(CupertinoIcons.back, color: AppColors.textPrimary, size: 22),
+        ),
+        middle: const Text(
+          '情侣共同检测',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
-      body: SafeArea(
+      child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
-
-              Text(
-                'Couple Detection',
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Both partners complete the checklist independently. Results are compared side by side.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-
-              const SizedBox(height: 48),
-
-              // How it works
-              _Step(number: '01', label: 'Create a shared session'),
-              _Step(number: '02', label: 'Send the invite code to your partner'),
-              _Step(number: '03', label: 'Each of you fills out the checklist'),
-              _Step(number: '04', label: 'View your results side by side'),
-
+              const SizedBox(height: AppSpacing.xl),
+              const Text('情侣检测', style: AppText.display),
+              const SizedBox(height: AppSpacing.sm),
+              const Text('双方独立完成清单，结果并排对比。', style: AppText.bodySecondary),
+              const SizedBox(height: AppSpacing.xxl),
+              const _Step(number: '01', label: '创建共享检测'),
+              const _Step(number: '02', label: '将邀请码发给你的伴侣'),
+              const _Step(number: '03', label: '双方各自独立填写'),
+              const _Step(number: '04', label: '查看双方结果对比'),
               const Spacer(),
-
-              // CTA — placeholder, Supabase integration comes next
               GestureDetector(
                 onTap: () {
-                  // TODO: create Supabase session and generate invite code
+                  // TODO: Supabase session creation
                 },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   decoration: BoxDecoration(
                     color: AppColors.textPrimary,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   alignment: Alignment.center,
                   child: const Text(
-                    'Start couple detection',
+                    '开始情侣检测',
                     style: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.background,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxl),
             ],
           ),
         ),
@@ -86,27 +73,26 @@ class CoupleModeScreen extends StatelessWidget {
 class _Step extends StatelessWidget {
   final String number;
   final String label;
-
   const _Step({required this.number, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Row(
         children: [
           Text(
             number,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.risk,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1,
-                ),
+            style: const TextStyle(
+              fontFamily: '.SF Pro Text',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.risk,
+              letterSpacing: 1,
+            ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
-          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: Text(label, style: AppText.body)),
         ],
       ),
     );

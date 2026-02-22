@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_theme.dart';
@@ -8,7 +8,7 @@ import '../../providers/checklist_provider.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  void _startDetection(BuildContext context, WidgetRef ref, String type) {
+  void _start(BuildContext context, WidgetRef ref, String type) {
     ref.read(entryTypeProvider.notifier).state = type;
     ref.read(checklistProvider.notifier).reset();
     context.go(Routes.checklist);
@@ -16,48 +16,32 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return CupertinoPageScaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 64),
-
-              Text(
-                'What do you want\nto find out?',
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Choose one. The detection is tailored to your selection.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-
+              const SizedBox(height: AppSpacing.xxl),
+              const Text('你想确认\n什么？', style: AppText.display),
+              const SizedBox(height: AppSpacing.sm),
+              const Text('选择一项，检测内容将根据你的选择调整。', style: AppText.bodySecondary),
               const Spacer(),
-
-              // Partner entry
               _EntryCard(
-                label: 'Did they cheat?',
-                sublabel: 'Detect signals in your partner\'s behavior',
-                onTap: () => _startDetection(context, ref, 'partner'),
+                label: 'TA出轨了吗',
+                sublabel: '检测伴侣行为中的异常信号',
+                onTap: () => _start(context, ref, 'partner'),
               ),
-
-              const SizedBox(height: 16),
-
-              // Self entry
+              const SizedBox(height: AppSpacing.md),
               _EntryCard(
-                label: 'Did I cheat?',
-                sublabel: 'Reflect on your own patterns and choices',
-                onTap: () => _startDetection(context, ref, 'self'),
+                label: '我出轨了吗',
+                sublabel: '审视自己的行为模式与选择',
+                onTap: () => _start(context, ref, 'self'),
                 dimmed: true,
               ),
-
-              const SizedBox(height: 56),
+              const SizedBox(height: AppSpacing.xxl),
             ],
           ),
         ),
@@ -85,31 +69,26 @@ class _EntryCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
         decoration: BoxDecoration(
           color: dimmed ? AppColors.surfaceElevated : AppColors.surface,
           border: Border.all(
             color: dimmed ? AppColors.divider : AppColors.textMuted,
             width: 1,
           ),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: dimmed
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
-                  ),
+              style: AppText.title.copyWith(
+                color: dimmed ? AppColors.textSecondary : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
-            Text(
-              sublabel,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(sublabel, style: AppText.bodySecondary),
           ],
         ),
       ),

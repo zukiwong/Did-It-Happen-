@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'constants/routes.dart';
 import 'screens/splash/splash_screen.dart';
@@ -10,46 +11,51 @@ import 'screens/result/result_info_screen.dart';
 import 'screens/result/result_emotion_screen.dart';
 import 'screens/couple_mode/couple_mode_screen.dart';
 
+// Use CupertinoPage for all routes — gives native iOS slide transition
+// and preserves edge-swipe-back gesture automatically.
+Page<void> _ios(Widget child) =>
+    CupertinoPage(child: child);
+
 final appRouter = GoRouter(
   initialLocation: Routes.splash,
   routes: [
     GoRoute(
       path: Routes.splash,
-      builder: (_, _) => const SplashScreen(),
+      pageBuilder: (_, _) => _ios(const SplashScreen()),
     ),
     GoRoute(
       path: Routes.home,
-      builder: (_, _) => const HomeScreen(),
+      pageBuilder: (_, _) => _ios(const HomeScreen()),
     ),
     GoRoute(
       path: Routes.checklist,
-      builder: (_, _) => const ChecklistScreen(),
+      pageBuilder: (_, _) => _ios(const ChecklistScreen()),
       routes: [
         GoRoute(
           path: 'phase2',
-          builder: (_, _) => const Phase2Screen(),
+          pageBuilder: (_, _) => _ios(const Phase2Screen()),
         ),
         GoRoute(
           path: 'phase3',
-          builder: (_, _) => const Phase3Screen(),
+          pageBuilder: (_, _) => _ios(const Phase3Screen()),
         ),
       ],
     ),
     GoRoute(
       path: Routes.report,
-      builder: (_, _) => const ReportScreen(),
+      pageBuilder: (_, _) => _ios(const ReportScreen()),
     ),
     GoRoute(
       path: Routes.resultInfo,
-      builder: (_, _) => const ResultInfoScreen(),
+      pageBuilder: (_, _) => _ios(const ResultInfoScreen()),
     ),
     GoRoute(
       path: Routes.resultEmotion,
-      builder: (_, _) => const ResultEmotionScreen(),
+      pageBuilder: (_, _) => _ios(const ResultEmotionScreen()),
     ),
     GoRoute(
       path: Routes.coupleMode,
-      builder: (_, _) => const CoupleModeScreen(),
+      pageBuilder: (_, _) => _ios(const CoupleModeScreen()),
     ),
   ],
 );

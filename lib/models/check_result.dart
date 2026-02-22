@@ -28,11 +28,11 @@ class CheckResult {
   String get riskLabel {
     switch (riskLevel) {
       case RiskLevel.low:
-        return 'No significant signals detected';
+        return '未发现明显异常';
       case RiskLevel.mid:
-        return 'Anomalous signals present';
+        return '存在异常信号';
       case RiskLevel.high:
-        return 'Multiple anomalous signals';
+        return '异常信号较多';
     }
   }
 }

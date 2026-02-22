@@ -1,94 +1,69 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import '../../constants/app_theme.dart';
 import '../../constants/routes.dart';
 
-/// Post-report screen for "Did they cheat?" entry — information gathering guide.
-/// Per UX doc: "进一步确认信息" — common info types, completeness, disclaimers.
-/// No advice given. Factual only.
 class ResultInfoScreen extends StatelessWidget {
   const ResultInfoScreen({super.key});
 
   static const _items = [
-    _InfoItem(
-      title: 'Communication records',
-      detail:
-          'Message timestamps, frequency changes, deleted conversations.',
-    ),
-    _InfoItem(
-      title: 'Location & schedule',
-      detail:
-          'Unexplained time gaps, check-in discrepancies, travel records.',
-    ),
-    _InfoItem(
-      title: 'Financial activity',
-      detail:
-          'Unusual transactions, cash withdrawals, unfamiliar charges.',
-    ),
-    _InfoItem(
-      title: 'Device behavior',
-      detail:
-          'New apps, changed passwords, notifications hidden from view.',
-    ),
-    _InfoItem(
-      title: 'Social pattern shifts',
-      detail:
-          'New contacts, changed routines, unexplained social absences.',
-    ),
+    _InfoItem(title: '通讯记录', detail: '消息时间戳、频率变化、已删除的对话。'),
+    _InfoItem(title: '行程与日程', detail: '无法解释的时间段、打卡记录不一致、出行记录。'),
+    _InfoItem(title: '资金动向', detail: '异常消费、现金提取、陌生账单。'),
+    _InfoItem(title: '设备行为', detail: '新应用、更换密码、屏蔽通知。'),
+    _InfoItem(title: '社交模式变化', detail: '新联系人、作息改变、无故缺席。'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CupertinoPageScaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
+      navigationBar: CupertinoNavigationBar(
         backgroundColor: AppColors.background,
+        border: const Border(bottom: BorderSide(color: AppColors.divider, width: 0.5)),
         leading: GestureDetector(
           onTap: () => context.go(Routes.report),
-          child: const Icon(Icons.arrow_back_ios, size: 18),
+          child: const Icon(CupertinoIcons.back, color: AppColors.textPrimary, size: 22),
+        ),
+        middle: const Text(
+          '进一步确认信息',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 48),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Gather more\ninformation',
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Common information types people consider in this situation.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-
-              const SizedBox(height: 36),
-
-              ..._items.map((item) => _InfoRow(item: item)),
-
-              const SizedBox(height: 40),
-
-              // Disclaimer — per PRD risk control section
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'This content is for reference only and does not constitute professional advice or factual judgment.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textMuted,
+      child: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.xxl),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const Text('常见信息类型', style: AppText.title),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text('以下为该情况下人们通常会考虑整理的信息类型。', style: AppText.bodySecondary),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._items.map((item) => _InfoRow(item: item)),
+                  const SizedBox(height: AppSpacing.xl),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: const Text(
+                      '本内容仅供参考，不构成专业意见或事实判断。',
+                      style: TextStyle(
+                        fontFamily: '.SF Pro Text',
                         fontSize: 13,
+                        color: AppColors.textMuted,
+                        height: 1.5,
                       ),
-                ),
+                    ),
+                  ),
+                ]),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -108,15 +83,15 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(item.title, style: Theme.of(context).textTheme.bodyLarge),
+          Text(item.title, style: AppText.body),
           const SizedBox(height: 4),
-          Text(item.detail, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          const Divider(color: AppColors.divider, height: 1),
+          Text(item.detail, style: AppText.bodySecondary),
+          const SizedBox(height: AppSpacing.lg),
+          Container(height: 0.5, color: AppColors.divider),
         ],
       ),
     );

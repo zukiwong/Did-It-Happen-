@@ -1,124 +1,73 @@
 import '../models/checklist_item.dart';
 
-/// All checklist questions, grouped by category.
-/// Phase 1: list-style multi-select
-/// Phase 2: single page per question (behavior verification)
-/// Phase 3: single page per question (values / cognitive gap)
-
 const List<ChecklistItem> kChecklistItems = [
-  // ── Phase 1: Relationship signals (list) ────────────────────────
-  ChecklistItem(
-    id: 'c1',
-    phase: 1,
-    category: 'Communication',
-    question: 'Has the frequency of your communication noticeably dropped?',
-  ),
-  ChecklistItem(
-    id: 'c2',
-    phase: 1,
-    category: 'Communication',
-    question: 'Are replies significantly slower than before?',
-  ),
-  ChecklistItem(
-    id: 'c3',
-    phase: 1,
-    category: 'Communication',
-    question: 'Have conversations become shorter or more surface-level?',
-  ),
-  ChecklistItem(
-    id: 'c4',
-    phase: 1,
-    category: 'Emotion',
-    question: 'Has their emotional state become noticeably more volatile?',
-  ),
-  ChecklistItem(
-    id: 'c5',
-    phase: 1,
-    category: 'Emotion',
-    question: 'Have they become more irritable or impatient toward you?',
-  ),
-  ChecklistItem(
-    id: 'c6',
-    phase: 1,
-    category: 'Emotion',
-    question: 'Do they seem distracted or emotionally absent?',
-  ),
-  ChecklistItem(
-    id: 'c7',
-    phase: 1,
-    category: 'Social',
-    question: 'Have they started protecting their phone more than usual?',
-  ),
-  ChecklistItem(
-    id: 'c8',
-    phase: 1,
-    category: 'Social',
-    question: 'Do they step away to take calls or reply to messages?',
-  ),
+  // ── 阶段1：关系信号（列表勾选）────────────────────────
+  ChecklistItem(id: 'c1', phase: 1, category: '沟通', question: '最近沟通频率是否明显下降？'),
+  ChecklistItem(id: 'c2', phase: 1, category: '沟通', question: '回复消息是否比以前明显变慢？'),
+  ChecklistItem(id: 'c3', phase: 1, category: '沟通', question: '对话内容是否变得更简短、更表面？'),
+  ChecklistItem(id: 'c4', phase: 1, category: '情绪', question: '对方情绪是否变得更容易波动？'),
+  ChecklistItem(id: 'c5', phase: 1, category: '情绪', question: '对方是否对你变得更容易不耐烦或暴躁？'),
+  ChecklistItem(id: 'c6', phase: 1, category: '情绪', question: '对方是否经常显得心不在焉或情绪不在线？'),
+  ChecklistItem(id: 'c7', phase: 1, category: '手机', question: '对方是否比以前更在意手机隐私？'),
+  ChecklistItem(id: 'c8', phase: 1, category: '手机', question: '对方是否会避开你接听电话或回复消息？'),
 
-  // ── Phase 2: Behavior verification (one per page) ────────────────
+  // ── 阶段2：行为验证（一题一页）────────────────────────
   ChecklistItem(
     id: 'b1',
     phase: 2,
-    category: 'Schedule',
-    question: 'Are there unexplained gaps in their schedule?',
-    detail: 'e.g. unaccounted time blocks, last-minute changes with no reason.',
+    category: '行程',
+    question: '最近是否存在行程不透明的时间段？',
+    detail: '例如无法解释的时间空白、临时变动却没有合理说明。',
   ),
   ChecklistItem(
     id: 'b2',
     phase: 2,
-    category: 'Schedule',
-    question: 'Have they started working late or traveling more often?',
-    detail: 'Consider whether this is a new pattern, not a long-standing one.',
+    category: '行程',
+    question: '是否开始更频繁地加班或出差？',
+    detail: '请判断这是否是最近新出现的规律，而非一直以来如此。',
   ),
   ChecklistItem(
     id: 'b3',
     phase: 2,
-    category: 'Lifestyle',
-    question: 'Have you noticed changes in their appearance or grooming habits?',
-    detail:
-        'e.g. new clothing, more attention to how they look before going out.',
+    category: '生活',
+    question: '是否注意到对方外貌或打扮习惯发生变化？',
+    detail: '例如购置新衣物、出门前更注重形象等。',
   ),
   ChecklistItem(
     id: 'b4',
     phase: 2,
-    category: 'Lifestyle',
-    question: 'Have they introduced new interests or references you don\'t recognize?',
-    detail: 'New music, places, phrases — things that don\'t trace back to you.',
+    category: '生活',
+    question: '对方是否突然出现了你不了解来源的新喜好或口头禅？',
+    detail: '例如新的音乐偏好、去过陌生的地方、使用你从未听过的词。',
   ),
   ChecklistItem(
     id: 'b5',
     phase: 2,
-    category: 'Digital',
-    question: 'Have they changed passwords or enabled extra privacy on devices?',
-    detail: 'Especially if this is a recent change with no clear explanation.',
+    category: '数字',
+    question: '对方是否更换了密码或增加了设备隐私设置？',
+    detail: '尤其是近期才出现的变化，且没有给出明确理由。',
   ),
 
-  // ── Phase 3: Values & cognitive gap (one per page) ───────────────
+  // ── 阶段3：价值观深度（一题一页）────────────────────────
   ChecklistItem(
     id: 'v1',
     phase: 3,
-    category: 'Values',
-    question:
-        'Do you and your partner share the same boundaries around opposite-sex friendships?',
-    detail:
-        'Misaligned expectations here are a common source of unspoken conflict.',
+    category: '价值观',
+    question: '你们对于异性社交的界限是否一致？',
+    detail: '对这个边界的认知不同，往往是很多无声冲突的根源。',
   ),
   ChecklistItem(
     id: 'v2',
     phase: 3,
-    category: 'Values',
-    question:
-        'Has there been behavior they normalized that you considered a boundary violation?',
-    detail:
-        'e.g. "we\'re just friends" dismissing something that felt wrong to you.',
+    category: '价值观',
+    question: '是否存在你认为越界、但对方认为正常的行为？',
+    detail: '例如用"只是朋友"来合理化你觉得不对的事。',
   ),
   ChecklistItem(
     id: 'v3',
     phase: 3,
-    category: 'Values',
-    question:
-        'Have you ever discovered they hid something — and later rationalized it?',
-    detail: 'The pattern of hiding + justifying is more significant than the act itself.',
+    category: '价值观',
+    question: '是否出现过对方隐瞒某事、事后又将其合理化的情况？',
+    detail: '隐瞒+合理化的模式，比单次行为本身更值得关注。',
   ),
 ];

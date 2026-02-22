@@ -1,11 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'constants/app_theme.dart';
 import 'router.dart';
 
-// Keys are injected at build time via --dart-define-from-file=dart_defines.json
-// Never hardcode secrets here.
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
@@ -25,10 +22,24 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Did It Happen?',
-      theme: AppTheme.dark,
+    return CupertinoApp.router(
+      title: '出了吗？',
       routerConfig: appRouter,
+      theme: const CupertinoThemeData(
+        brightness: Brightness.dark,
+        primaryColor: CupertinoColors.white,
+        scaffoldBackgroundColor: Color(0xFF0A0A0A),
+        textTheme: CupertinoTextThemeData(
+          primaryColor: CupertinoColors.white,
+          textStyle: TextStyle(
+            fontFamily: '.SF Pro Text',
+            color: CupertinoColors.white,
+          ),
+        ),
+      ),
+      localizationsDelegates: const [
+        DefaultCupertinoLocalizations.delegate,
+      ],
       debugShowCheckedModeBanner: false,
     );
   }
