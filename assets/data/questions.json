@@ -1,0 +1,419 @@
+[
+  {
+    "id": "q1",
+    "phase": 1,
+    "category": "消费与账单",
+    "moduleId": 1,
+    "interactionType": "guide",
+    "question": "查看微信 / 支付宝账单记录",
+    "steps": [
+      "打开微信 → 我 → 服务 → 账单",
+      "打开支付宝 → 账单 → 全部账单"
+    ],
+    "bullets": [
+      "是否存在酒店或住宿消费",
+      "是否出现陌生转账对象",
+      "是否有你不了解的餐饮或娱乐支出"
+    ],
+    "tip": "时间节点尤其重要。"
+  },
+  {
+    "id": "q2",
+    "phase": 1,
+    "category": "消费与账单",
+    "moduleId": 1,
+    "interactionType": "guide",
+    "question": "导出完整账单（不要只看最近）",
+    "steps": [
+      "微信账单 → 右上角下载 → 导出 CSV",
+      "支付宝账单 → 下载电子版对账单"
+    ],
+    "bullets": [
+      "月度账单",
+      "全部历史记录",
+      "邮件账单"
+    ],
+    "tip": "很多人只清理表面记录。"
+  },
+  {
+    "id": "q3",
+    "phase": 1,
+    "category": "消费与账单",
+    "moduleId": 1,
+    "interactionType": "guide",
+    "question": "查看购物记录中的特殊商品",
+    "steps": [
+      "打开淘宝 / 京东 → 我的订单 → 全部订单",
+      "切换查看「已删除」订单"
+    ],
+    "bullets": [
+      "礼物类商品",
+      "私人物品",
+      "你从未见过的购买内容"
+    ],
+    "tip": "尤其注意时间节点。"
+  },
+  {
+    "id": "q4",
+    "phase": 1,
+    "category": "消费与账单",
+    "moduleId": 1,
+    "interactionType": "guide",
+    "question": "打开美团 / 淘宝 / 京东收货地址管理",
+    "steps": [
+      "美团 → 我的 → 收货地址",
+      "淘宝 → 我的淘宝 → 收货地址",
+      "京东 → 我的 → 地址管理"
+    ],
+    "bullets": [
+      "是否存在陌生收货地址",
+      "是否出现你不知道的地点",
+      "是否有临时或异常地址"
+    ],
+    "tip": "很多人删除订单，但会忘记删除地址。"
+  },
+  {
+    "id": "q5",
+    "phase": 1,
+    "category": "行程与位置",
+    "moduleId": 2,
+    "interactionType": "guide",
+    "question": "查看地图足迹或导航历史",
+    "steps": [
+      "高德地图 → 我的 → 足迹",
+      "百度地图 → 我的 → 历史记录",
+      "苹果地图 → 设置 → 隐私 → 定位服务 → 系统服务 → 常去地点"
+    ],
+    "bullets": [
+      "酒店附近",
+      "私人会所",
+      "陌生小区",
+      "非常用地点"
+    ],
+    "tip": "不要只看最近记录，历史轨迹更重要。"
+  },
+  {
+    "id": "q6",
+    "phase": 1,
+    "category": "行程与位置",
+    "moduleId": 2,
+    "interactionType": "guide",
+    "question": "查看打车或出行软件记录",
+    "steps": [
+      "滴滴 → 行程 → 全部行程",
+      "高德打车 → 我的行程"
+    ],
+    "bullets": [
+      "行程终点",
+      "时间节点",
+      "与实际描述是否一致"
+    ],
+    "tip": "删除订单不代表没有记录。"
+  },
+  {
+    "id": "q7",
+    "phase": 1,
+    "category": "行程与位置",
+    "moduleId": 2,
+    "interactionType": "guide",
+    "question": "核对时间线",
+    "steps": [
+      "把他说的行程与实际记录对比"
+    ],
+    "bullets": [
+      "是否存在空白时间",
+      "是否前后说法不一致"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q8",
+    "phase": 1,
+    "category": "行程与位置",
+    "moduleId": 2,
+    "interactionType": "guide",
+    "question": "查看手机 WiFi 连接历史",
+    "steps": [
+      "设置 → WiFi → 点击「i」图标查看已连接网络",
+      "部分安卓：设置 → WLAN → 已保存网络"
+    ],
+    "bullets": [
+      "酒店名称",
+      "宾馆",
+      "私人影院",
+      "陌生热点"
+    ],
+    "tip": "很多人不会清理这里。"
+  },
+  {
+    "id": "q9",
+    "phase": 1,
+    "category": "应用与设备",
+    "moduleId": 3,
+    "interactionType": "guide",
+    "question": "查看 App Store 下载历史",
+    "steps": [
+      "App Store → 右上角头像 → 已购项目"
+    ],
+    "bullets": [
+      "已删除的软件",
+      "下载时间节点",
+      "不熟悉的应用"
+    ],
+    "tip": "云端下载图标仍会保留。"
+  },
+  {
+    "id": "q10",
+    "phase": 1,
+    "category": "应用与设备",
+    "moduleId": 3,
+    "interactionType": "guide",
+    "question": "查看手机是否存在分身或双系统",
+    "steps": [
+      "设置 → 应用管理 → 搜索「分身」",
+      "部分品牌：设置 → 隐私 → 应用加密 / 隐藏空间"
+    ],
+    "bullets": [
+      "应用分身",
+      "双空间",
+      "隐藏系统"
+    ],
+    "tip": "很多隐私行为会在这里。"
+  },
+  {
+    "id": "q11",
+    "phase": 1,
+    "category": "应用与设备",
+    "moduleId": 3,
+    "interactionType": "guide",
+    "question": "查看屏幕使用时间",
+    "steps": [
+      "iPhone：设置 → 屏幕使用时间 → 查看所有活动",
+      "安卓：设置 → 数字健康 → 屏幕时间"
+    ],
+    "bullets": [
+      "深夜活跃时间",
+      "高频应用",
+      "异常时段"
+    ],
+    "tip": "异常时段通常会留下痕迹。"
+  },
+  {
+    "id": "q12",
+    "phase": 1,
+    "category": "应用与设备",
+    "moduleId": 3,
+    "interactionType": "guide",
+    "question": "查看照片时间与位置 / 隐藏相册",
+    "steps": [
+      "照片 → 选中图片 → 左滑查看 Exif 信息",
+      "iPhone：照片 → 相册 → 隐藏的项目",
+      "照片 → 最近删除"
+    ],
+    "bullets": [
+      "拍摄时间",
+      "位置信息",
+      "是否存在异常照片或隐藏内容"
+    ],
+    "tip": "很多内容会被放在这里。"
+  },
+  {
+    "id": "q13",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "查看最近聊天列表",
+    "steps": [
+      "打开微信主界面",
+      "观察聊天列表排序和联系人"
+    ],
+    "bullets": [
+      "聊天最频繁的人",
+      "是否出现陌生联系人"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q14",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "搜索聊天关键词",
+    "steps": [
+      "微信搜索框 → 输入关键词"
+    ],
+    "bullets": [
+      "你的名字 / 外号 / 拼音缩写",
+      "确认他在别人面前如何提及你"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q15",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "搜索特殊表情或暗号",
+    "steps": [
+      "微信搜索框 → 粘贴表情搜索"
+    ],
+    "bullets": [
+      "🐔  🍑  ❤️  💋",
+      "很多隐晦沟通会使用表情"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q16",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "查看好友添加记录",
+    "steps": [
+      "微信 → 通讯录 → 新朋友"
+    ],
+    "bullets": [
+      "最近新增好友",
+      "添加方式来源"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q17",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "查看是否存在小号或备用账号",
+    "steps": [
+      "微信 → 我 → 右上角头像 → 切换账号"
+    ],
+    "bullets": [
+      "是否存在第二账号",
+      "是否存在异常登录"
+    ],
+    "tip": "很多人会用小号当储存空间。"
+  },
+  {
+    "id": "q18",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "查看聊天记录是否存在断层",
+    "steps": [
+      "打开某个聊天 → 翻到某个时间节点",
+      "查看记录是否有时间跳跃"
+    ],
+    "bullets": [
+      "时间突然缺失",
+      "记录异常减少"
+    ],
+    "tip": "这通常意味着清理行为。"
+  },
+  {
+    "id": "q19",
+    "phase": 2,
+    "category": "社交与聊天",
+    "moduleId": 4,
+    "interactionType": "guide",
+    "question": "查看小程序 / 群聊 / 朋友圈互动",
+    "steps": [
+      "微信 → 发现 → 小程序 → 最近使用",
+      "通讯录 → 群聊",
+      "朋友圈 → 互动记录"
+    ],
+    "bullets": [
+      "常用 / 不熟悉的小程序",
+      "是否存在陌生群",
+      "最近点赞和评论对象"
+    ],
+    "tip": "互动频率往往比聊天更真实。"
+  },
+  {
+    "id": "q20",
+    "phase": 2,
+    "category": "短视频平台",
+    "moduleId": 5,
+    "interactionType": "guide",
+    "question": "查看短视频平台钱包与私信",
+    "steps": [
+      "抖音 → 我 → 钱包 → 明细",
+      "抖音 / 快手 → 私信列表"
+    ],
+    "bullets": [
+      "打赏记录",
+      "消费记录",
+      "私信联系人"
+    ],
+    "tip": "即使删除记录，互动痕迹仍可能存在。"
+  },
+  {
+    "id": "q21",
+    "phase": 2,
+    "category": "短视频平台",
+    "moduleId": 5,
+    "interactionType": "guide",
+    "question": "查看短视频分享面板头像",
+    "steps": [
+      "随便打开一个视频 → 点击分享",
+      "查看分享面板底部的头像列表"
+    ],
+    "bullets": [
+      "头像通常代表最近联系最频繁的人"
+    ],
+    "tip": null
+  },
+  {
+    "id": "q22",
+    "phase": 3,
+    "category": "行为变化",
+    "moduleId": 6,
+    "interactionType": "swipe",
+    "question": "是否突然更换密码或加强隐私保护？",
+    "detail": "例如手机不离身、不愿让你看到屏幕、突然设置新密码。",
+    "steps": null,
+    "bullets": null,
+    "tip": null
+  },
+  {
+    "id": "q23",
+    "phase": 3,
+    "category": "行为变化",
+    "moduleId": 6,
+    "interactionType": "swipe",
+    "question": "是否出现解释反复变化的情况？",
+    "detail": "前后说法不一致，被追问时出现情绪防御。",
+    "steps": null,
+    "bullets": null,
+    "tip": null
+  },
+  {
+    "id": "q24",
+    "phase": 3,
+    "category": "行为变化",
+    "moduleId": 6,
+    "interactionType": "swipe",
+    "question": "是否刻意回避某些话题或问题？",
+    "detail": "例如转移话题、情绪防御、对某类问题异常敏感。",
+    "steps": null,
+    "bullets": null,
+    "tip": null
+  },
+  {
+    "id": "q25",
+    "phase": 3,
+    "category": "行为变化",
+    "moduleId": 6,
+    "interactionType": "swipe",
+    "question": "是否存在你无法解释的行为变化？",
+    "detail": "例如突然改变习惯、时间异常、情感态度发生明显转变。",
+    "steps": null,
+    "bullets": null,
+    "tip": null
+  }
+]
