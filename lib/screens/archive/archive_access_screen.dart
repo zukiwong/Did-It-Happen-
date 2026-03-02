@@ -222,19 +222,17 @@ class _InputView extends StatelessWidget {
               CupertinoTextField(
                 controller: controller,
                 focusNode: focusNode,
-                obscureText: true,
+                obscureText: false,
                 textAlign: TextAlign.center,
                 placeholder: '档案访问密钥',
                 style: const TextStyle(
                   color: Color(0xFFFFFFFF),
                   fontSize: 20,
-                  fontFamily: 'Courier',
-                  letterSpacing: 10,
+                  letterSpacing: 6,
                 ),
                 placeholderStyle: const TextStyle(
                   color: Color(0x1AFFFFFF),
                   fontSize: 16,
-                  fontFamily: 'Courier',
                   letterSpacing: 1,
                 ),
                 padding: const EdgeInsets.symmetric(

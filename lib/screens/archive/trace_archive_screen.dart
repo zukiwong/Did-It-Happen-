@@ -16,30 +16,48 @@ class TraceArchiveScreen extends ConsumerStatefulWidget {
 }
 
 class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
-  final Map<int, ArchiveQuestionResponse> _responses = {
-    1: ArchiveQuestionResponse(
-      questionId: 1,
-      status: ArchiveRecordStatus.anomaly,
-      evidences: [
-        ArchiveEvidence(
-          id: 'ev1',
-          timestamp: '2026.03.12 23:15',
-          type: ArchiveEvidenceType.image,
-        ),
-      ],
-    ),
-    3: ArchiveQuestionResponse(
-      questionId: 3,
-      status: ArchiveRecordStatus.anomaly,
-      evidences: [
-        ArchiveEvidence(
-          id: 'ev2',
-          timestamp: '2026.03.08 19:22',
-          type: ArchiveEvidenceType.image,
-        ),
-      ],
-    ),
-  };
+  // Local overrides: user can toggle/add/delete within this session.
+  // Keyed by questionId; null means "use record data as-is".
+  final Map<int, ArchiveQuestionResponse> _overrides = {};
+
+  // Evidence selected for preview overlay.
+  ArchiveEvidence? _selectedEvidence;
+
+  static String _formatDate(DateTime dt) =>
+      '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} '
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+  // Derive responses from the live record, merged with local overrides.
+  // Use ref.read so this can be safely called outside build() (e.g. in setState).
+  Map<int, ArchiveQuestionResponse> _buildResponses() {
+    final record = ref.read(investigationProvider).record;
+    final map = <int, ArchiveQuestionResponse>{};
+    if (record != null) {
+      for (final entry in record.results.entries) {
+        final qId = int.tryParse(entry.key);
+        if (qId == null) continue;
+        if (entry.value == 'flagged') {
+          final keys = record.evidences[entry.key] ?? [];
+          final evList = keys.asMap().entries.map((e) {
+            final isAudio = e.value.contains('.m4a');
+            return ArchiveEvidence(
+              id:        e.value,
+              timestamp: _formatDate(record.completedAt),
+              type:      isAudio ? ArchiveEvidenceType.audio : ArchiveEvidenceType.image,
+            );
+          }).toList();
+          map[qId] = ArchiveQuestionResponse(
+            questionId: qId,
+            status:     ArchiveRecordStatus.anomaly,
+            evidences:  evList,
+          );
+        }
+      }
+    }
+    // Apply local overrides on top
+    map.addAll(_overrides);
+    return map;
+  }
 
   String _selectedCategory = '全部';
   String _searchQuery = '';
@@ -61,9 +79,9 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
 
   void _toggleStatus(int questionId) {
     setState(() {
-      final existing = _responses[questionId];
+      final existing = _buildResponses()[questionId];
       if (existing != null) {
-        _responses[questionId] = ArchiveQuestionResponse(
+        _overrides[questionId] = ArchiveQuestionResponse(
           questionId: questionId,
           status: existing.status == ArchiveRecordStatus.clean
               ? ArchiveRecordStatus.anomaly
@@ -71,7 +89,7 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
           evidences: existing.evidences,
         );
       } else {
-        _responses[questionId] = ArchiveQuestionResponse(
+        _overrides[questionId] = ArchiveQuestionResponse(
           questionId: questionId,
           status: ArchiveRecordStatus.anomaly,
           evidences: [],
@@ -83,19 +101,19 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
   void _addEvidence(int questionId) {
     final newEv = ArchiveEvidence(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: '2026.02.25 15:45',
+      timestamp: _formatDate(DateTime.now()),
       type: ArchiveEvidenceType.image,
     );
     setState(() {
-      final existing = _responses[questionId];
+      final existing = _buildResponses()[questionId];
       if (existing != null) {
-        _responses[questionId] = ArchiveQuestionResponse(
+        _overrides[questionId] = ArchiveQuestionResponse(
           questionId: questionId,
           status: ArchiveRecordStatus.anomaly,
           evidences: [...existing.evidences, newEv],
         );
       } else {
-        _responses[questionId] = ArchiveQuestionResponse(
+        _overrides[questionId] = ArchiveQuestionResponse(
           questionId: questionId,
           status: ArchiveRecordStatus.anomaly,
           evidences: [newEv],
@@ -106,9 +124,9 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
 
   void _deleteEvidence(int questionId, String evidenceId) {
     setState(() {
-      final existing = _responses[questionId];
+      final existing = _buildResponses()[questionId];
       if (existing != null) {
-        _responses[questionId] = ArchiveQuestionResponse(
+        _overrides[questionId] = ArchiveQuestionResponse(
           questionId: questionId,
           status: existing.status,
           evidences: existing.evidences
@@ -121,6 +139,8 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch provider so any record change triggers a rebuild.
+    ref.watch(investigationProvider);
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFF050505),
       child: Stack(
@@ -152,22 +172,26 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Question records
-                      ..._filtered.map((q) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: ArchiveRecordItem(
-                              question: q,
-                              response: _responses[q.id],
-                              onToggleStatus: () => _toggleStatus(q.id),
-                              onAddEvidence: () => _addEvidence(q.id),
-                              onDeleteEvidence: (evId) =>
-                                  _deleteEvidence(q.id, evId),
-                            ),
-                          )),
+                      // Question records — derived from live record each build
+                      ...() {
+                        final responses = _buildResponses();
+                        return _filtered.map((q) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: ArchiveRecordItem(
+                            question:        q,
+                            response:        responses[q.id],
+                            passphrase:      ref.read(investigationProvider).passphrase ?? '',
+                            onToggleStatus:  () => _toggleStatus(q.id),
+                            onAddEvidence:   () => _addEvidence(q.id),
+                            onDeleteEvidence: (evId) => _deleteEvidence(q.id, evId),
+                            onTapEvidence:   (ev) => setState(() => _selectedEvidence = ev),
+                          ),
+                        ));
+                      }(),
 
                       // Observation log
                       ArchiveObservationLog(
-                        record: ref.watch(investigationProvider).record,
+                        record: ref.read(investigationProvider).record,
                       ),
                     ]),
                   ),
@@ -175,6 +199,16 @@ class _TraceArchiveScreenState extends ConsumerState<TraceArchiveScreen> {
               ),
             ],
           ),
+
+          // Evidence preview overlay
+          if (_selectedEvidence != null)
+            Positioned.fill(
+              child: ArchiveEvidenceOverlay(
+                evidence:   _selectedEvidence!,
+                passphrase: ref.read(investigationProvider).passphrase ?? '',
+                onClose:    () => setState(() => _selectedEvidence = null),
+              ),
+            ),
 
           // Floating save button
           Positioned(

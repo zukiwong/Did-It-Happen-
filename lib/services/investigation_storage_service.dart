@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as dev;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'encryption_service.dart';
 
@@ -89,10 +90,11 @@ class InvestigationStorageService {
 
       return SaveStatus.success;
     } on PostgrestException catch (e) {
-      // Unique violation on id (race condition)
+      dev.log('save() PostgrestException: code=${e.code} msg=${e.message}');
       if (e.code == '23505') return SaveStatus.passphraseConflict;
       return SaveStatus.networkError;
-    } catch (_) {
+    } catch (e, st) {
+      dev.log('save() unexpected error: $e\n$st');
       return SaveStatus.networkError;
     }
   }

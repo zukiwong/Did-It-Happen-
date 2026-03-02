@@ -40,24 +40,31 @@ class _TraceReportScreenState extends ConsumerState<TraceReportScreen> {
 
     ref.read(investigationProvider.notifier).setPassphrase(passphrase);
 
-    // Batch-upload any files staged during checklist (passphrase was not set then)
-    final pending = ref.read(investigationProvider).pendingFiles;
+    // Snapshot the pending list before the loop — state changes inside.
+    final pending = List.of(ref.read(investigationProvider).pendingFiles);
+    print('_handleConfirmKey: ${pending.length} pending files');
+
     for (final p in pending) {
       final result = await EvidenceService.uploadEvidence(
         file:       p.file,
         passphrase: passphrase,
         itemId:     p.itemId,
       );
+      print('upload ${p.file.path}: success=${result.success} key=${result.fileKey} err=${result.error}');
       if (result.success && result.fileKey != null) {
         ref.read(investigationProvider.notifier).addEvidenceKey(p.itemId, result.fileKey!);
       }
     }
-    // Clear the staging queue
+
     if (pending.isNotEmpty) {
       ref.read(investigationProvider.notifier).clearPendingFiles();
     }
 
+    final recBefore = ref.read(investigationProvider).record;
+    print('results before save: ${recBefore?.results}');
+    print('evidences before save: ${recBefore?.evidences}');
     final status = await ref.read(investigationProvider.notifier).save();
+    print('save result: $status');
     if (!mounted) return;
 
     if (status == SaveStatus.success) {

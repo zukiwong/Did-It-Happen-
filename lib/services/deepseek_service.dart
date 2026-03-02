@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 /// A single chat message for the DeepSeek API.
 class ChatMessage {
@@ -12,10 +13,7 @@ class ChatMessage {
 }
 
 /// Wraps the DeepSeek Chat Completions API.
-///
-/// API key is injected at build time via --dart-define=DEEPSEEK_API_KEY=...
 class DeepSeekService {
-  static const _apiKey  = String.fromEnvironment('DEEPSEEK_API_KEY');
   static const _baseUrl = 'https://api.deepseek.com/chat/completions';
   static const _model   = 'deepseek-chat';
 
@@ -27,10 +25,6 @@ class DeepSeekService {
     required List<ChatMessage> history,
     required String systemPrompt,
   }) async {
-    if (_apiKey.isEmpty) {
-      throw const DeepSeekException('DEEPSEEK_API_KEY not set. '
-          'Run with --dart-define=DEEPSEEK_API_KEY=<key>');
-    }
 
     final messages = [
       ChatMessage(role: 'system', content: systemPrompt),
@@ -41,7 +35,7 @@ class DeepSeekService {
       Uri.parse(_baseUrl),
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': 'Bearer $_apiKey',
+        'Authorization': 'Bearer $deepSeekApiKey',
       },
       body: jsonEncode({
         'model':       _model,

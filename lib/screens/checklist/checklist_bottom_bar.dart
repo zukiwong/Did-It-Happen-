@@ -8,6 +8,8 @@ class ChecklistBottomBar extends StatelessWidget {
   final bool isLast;
   final bool uploading;
   final bool isRecording;
+  final int uploadCount;
+  final bool isFlagged;
   final VoidCallback onToggleAnomaly;
   final VoidCallback onNext;
   final VoidCallback onFlag;
@@ -27,6 +29,8 @@ class ChecklistBottomBar extends StatelessWidget {
     required this.onCamera,
     required this.onGallery,
     required this.onAudio,
+    this.uploadCount = 0,
+    this.isFlagged = false,
   });
 
   @override
@@ -45,27 +49,53 @@ class ChecklistBottomBar extends StatelessWidget {
       ),
       child: anomalyMode
           // ── Expanded tool panel ────────────────────────────────
-          ? AnimatedContainer(
+          ? Column(
               key: const ValueKey('anomaly'),
-              duration: const Duration(milliseconds: 280),
-              curve: const Cubic(0.23, 1, 0.32, 1),
-              width: double.infinity,
-              height: 72,
-              decoration: BoxDecoration(
-                color: const Color(0x66450A0A),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0x4DEF4444)),
-                boxShadow: const [BoxShadow(color: Color(0x26EF4444), blurRadius: 15)],
-              ),
-              child: ChecklistAnomalyToolPanel(
-                onFlag: onFlag,
-                onCamera: onCamera,
-                onGallery: onGallery,
-                onAudio: onAudio,
-                onCollapse: onToggleAnomaly,
-                uploading: uploading,
-                isRecording: isRecording,
-              ),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Upload count hint
+                if (uploadCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(CupertinoIcons.checkmark_circle_fill,
+                            size: 11, color: Color(0x8034D399)),
+                        const SizedBox(width: 5),
+                        Text(
+                          '已添加 $uploadCount 个文件',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0x8034D399),
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: const Cubic(0.23, 1, 0.32, 1),
+                  width: double.infinity,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0x66450A0A),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0x4DEF4444)),
+                    boxShadow: const [BoxShadow(color: Color(0x26EF4444), blurRadius: 15)],
+                  ),
+                  child: ChecklistAnomalyToolPanel(
+                    onFlag: onFlag,
+                    onCamera: onCamera,
+                    onGallery: onGallery,
+                    onAudio: onAudio,
+                    onCollapse: onToggleAnomaly,
+                    uploading: uploading,
+                    isRecording: isRecording,
+                  ),
+                ),
+              ],
             )
           // ── Collapsed: anomaly button + next button ────────────
           : SizedBox(
@@ -110,7 +140,7 @@ class ChecklistBottomBar extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              isLast ? '完成检查' : '未见异常',
+                              isLast ? '完成检查' : (isFlagged ? '已标记，下一题' : '未见异常'),
                               style: const TextStyle(
                                 fontSize: 16,
                                 color: Color(0xFFFFFFFF),

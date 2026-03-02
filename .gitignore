@@ -48,6 +48,7 @@ app.*.map.json
 .env
 *.env
 dart_defines.json
+lib/config.dart
 
 # Product docs — local only
 产品文档/

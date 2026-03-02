@@ -39,7 +39,14 @@ class _TraceChecklistScreenState
   String get _itemId => _current.id.toString();
 
   void _handleNext() {
-    ref.read(investigationProvider.notifier).markResult(_itemId, 'normal');
+    // Only mark 'normal' if no evidence/flag has been set for this item.
+    // Uploading a file already marks it 'flagged'; don't overwrite that.
+    final state = ref.read(investigationProvider);
+    final alreadyFlagged = state.record?.results[_itemId] == 'flagged' ||
+        state.pendingFiles.any((p) => p.itemId == _itemId);
+    if (!alreadyFlagged) {
+      ref.read(investigationProvider.notifier).markResult(_itemId, 'normal');
+    }
     if (_isLast) {
       widget.onNext();
     } else {
@@ -106,6 +113,13 @@ class _TraceChecklistScreenState
     }
   }
 
+  /// Returns the total number of files (staged + uploaded) for the current item.
+  int _uploadCountForCurrent(InvestigationState state) {
+    final staged   = state.pendingFiles.where((p) => p.itemId == _itemId).length;
+    final uploaded = state.record?.evidences[_itemId]?.length ?? 0;
+    return staged + uploaded;
+  }
+
   Future<void> _uploadFile(File file) async {
     final passphrase = ref.read(investigationProvider).passphrase ?? '';
     if (passphrase.isEmpty) {
@@ -130,6 +144,7 @@ class _TraceChecklistScreenState
 
   @override
   Widget build(BuildContext context) {
+    final invState = ref.watch(investigationProvider);
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       child: Stack(
@@ -159,6 +174,9 @@ class _TraceChecklistScreenState
                   isLast: _isLast,
                   uploading: _uploading,
                   isRecording: _isRecording,
+                  uploadCount: _uploadCountForCurrent(invState),
+                  isFlagged: invState.record?.results[_itemId] == 'flagged' ||
+                      invState.pendingFiles.any((p) => p.itemId == _itemId),
                   onToggleAnomaly: () =>
                       setState(() => _anomalyMode = !_anomalyMode),
                   onNext: _handleNext,

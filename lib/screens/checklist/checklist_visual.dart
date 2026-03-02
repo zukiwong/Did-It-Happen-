@@ -74,19 +74,6 @@ class ChecklistTopBar extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(
-            width: 32,
-            child: Text(
-              '${currentIndex + 1}',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0x4DFFFFFF),
-                fontFamily: 'Courier',
-                letterSpacing: 2,
-              ),
-            ),
-          ),
         ],
       ),
     );

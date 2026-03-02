@@ -1,7 +1,13 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../data/questions.dart';
 import '../../services/investigation_storage_service.dart';
+import '../../services/evidence_service.dart';
 import '../report/report_timeline.dart' show buildTimelineEntries;
 
 // ── Data models ───────────────────────────────────────────────
@@ -214,17 +220,21 @@ class ArchiveFilterBar extends StatelessWidget {
 class ArchiveRecordItem extends StatefulWidget {
   final QuestionItem question;
   final ArchiveQuestionResponse? response;
+  final String passphrase;
   final VoidCallback onToggleStatus;
   final VoidCallback onAddEvidence;
   final ValueChanged<String> onDeleteEvidence;
+  final ValueChanged<ArchiveEvidence> onTapEvidence;
 
   const ArchiveRecordItem({
     super.key,
     required this.question,
     required this.response,
+    required this.passphrase,
     required this.onToggleStatus,
     required this.onAddEvidence,
     required this.onDeleteEvidence,
+    required this.onTapEvidence,
   });
 
   @override
@@ -394,9 +404,11 @@ class _ArchiveRecordItemState extends State<ArchiveRecordItem> {
               response: widget.response,
               isAnomaly: _isAnomaly,
               hasEvidence: _hasEvidence,
+              passphrase: widget.passphrase,
               onToggleStatus: widget.onToggleStatus,
               onAddEvidence: widget.onAddEvidence,
               onDeleteEvidence: widget.onDeleteEvidence,
+              onTapEvidence: widget.onTapEvidence,
             ),
             crossFadeState: _expanded
                 ? CrossFadeState.showSecond
@@ -416,9 +428,11 @@ class ArchiveExpandedContent extends StatelessWidget {
   final ArchiveQuestionResponse? response;
   final bool isAnomaly;
   final bool hasEvidence;
+  final String passphrase;
   final VoidCallback onToggleStatus;
   final VoidCallback onAddEvidence;
   final ValueChanged<String> onDeleteEvidence;
+  final ValueChanged<ArchiveEvidence> onTapEvidence;
 
   const ArchiveExpandedContent({
     super.key,
@@ -426,9 +440,11 @@ class ArchiveExpandedContent extends StatelessWidget {
     required this.response,
     required this.isAnomaly,
     required this.hasEvidence,
+    required this.passphrase,
     required this.onToggleStatus,
     required this.onAddEvidence,
     required this.onDeleteEvidence,
+    required this.onTapEvidence,
   });
 
   @override
@@ -596,8 +612,10 @@ class ArchiveExpandedContent extends StatelessWidget {
               children: [
                 if (response != null)
                   ...response!.evidences.map((ev) => ArchiveEvidenceThumbnail(
-                        evidence: ev,
-                        onDelete: () => onDeleteEvidence(ev.id),
+                        evidence:   ev,
+                        passphrase: passphrase,
+                        onTap:      () => onTapEvidence(ev),
+                        onDelete:   () => onDeleteEvidence(ev.id),
                       )),
                 // Add button
                 CupertinoButton(
@@ -632,34 +650,71 @@ class ArchiveExpandedContent extends StatelessWidget {
 
 // ── Evidence thumbnail ────────────────────────────────────────
 
-class ArchiveEvidenceThumbnail extends StatelessWidget {
+class ArchiveEvidenceThumbnail extends StatefulWidget {
   final ArchiveEvidence evidence;
+  final String passphrase;
   final VoidCallback onDelete;
+  final VoidCallback onTap;
 
   const ArchiveEvidenceThumbnail({
     super.key,
     required this.evidence,
+    required this.passphrase,
     required this.onDelete,
+    required this.onTap,
   });
+
+  @override
+  State<ArchiveEvidenceThumbnail> createState() => _ArchiveEvidenceThumbnailState();
+}
+
+class _ArchiveEvidenceThumbnailState extends State<ArchiveEvidenceThumbnail> {
+  Uint8List? _thumbBytes;
+
+  bool get _isAudio => widget.evidence.type == ArchiveEvidenceType.audio;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isAudio) _loadThumb();
+  }
+
+  Future<void> _loadThumb() async {
+    final bytes = await EvidenceService.downloadEvidence(
+      fileKey:    widget.evidence.id,
+      passphrase: widget.passphrase,
+    );
+    if (mounted && bytes != null) setState(() => _thumbBytes = bytes);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: const Color(0x0AFFFFFF),
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: widget.onTap,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x1AFFFFFF)),
-          ),
-          child: Icon(
-            evidence.type == ArchiveEvidenceType.audio
-                ? CupertinoIcons.mic
-                : CupertinoIcons.photo,
-            size: 24,
-            color: const Color(0x33FFFFFF),
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _isAudio
+                    ? const Color(0xFF0A1A12)
+                    : const Color(0x0AFFFFFF),
+                border: Border.all(
+                  color: _isAudio
+                      ? const Color(0x4034D399)
+                      : const Color(0x1AFFFFFF),
+                ),
+              ),
+              child: _isAudio
+                  ? const Icon(CupertinoIcons.mic, size: 24, color: Color(0xFF34D399))
+                  : _thumbBytes != null
+                      ? Image.memory(_thumbBytes!, fit: BoxFit.cover, width: 64, height: 64)
+                      : const Icon(CupertinoIcons.photo, size: 24, color: Color(0x33FFFFFF)),
+            ),
           ),
         ),
         Positioned(
@@ -667,7 +722,7 @@ class ArchiveEvidenceThumbnail extends StatelessWidget {
           right: 4,
           child: CupertinoButton(
             padding: EdgeInsets.zero,
-            onPressed: onDelete,
+            onPressed: widget.onDelete,
             minimumSize: Size.zero,
             child: Container(
               width: 20,
@@ -686,6 +741,381 @@ class ArchiveEvidenceThumbnail extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Evidence preview overlay ──────────────────────────────────
+
+/// Shown when the user taps an evidence thumbnail in the archive.
+/// Downloads + decrypts the file from Supabase, then previews it.
+class ArchiveEvidenceOverlay extends StatefulWidget {
+  final ArchiveEvidence evidence;
+  final String passphrase;
+  final VoidCallback onClose;
+
+  const ArchiveEvidenceOverlay({
+    super.key,
+    required this.evidence,
+    required this.passphrase,
+    required this.onClose,
+  });
+
+  @override
+  State<ArchiveEvidenceOverlay> createState() => _ArchiveEvidenceOverlayState();
+}
+
+class _ArchiveEvidenceOverlayState extends State<ArchiveEvidenceOverlay>
+    with SingleTickerProviderStateMixin {
+  bool _loading = true;
+  bool _error   = false;
+
+  /// Decrypted image bytes — set once download completes.
+  Uint8List? _imageBytes;
+
+  /// Temp file path for audio — set once download completes.
+  String? _audioPath;
+
+  AudioPlayer? _player;
+  bool _isPlaying = false;
+  late AnimationController _waveController;
+
+  bool get _isAudio => widget.evidence.type == ArchiveEvidenceType.audio;
+
+  @override
+  void initState() {
+    super.initState();
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _downloadAndDecrypt();
+  }
+
+  @override
+  void dispose() {
+    _waveController.dispose();
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _downloadAndDecrypt() async {
+    final bytes = await EvidenceService.downloadEvidence(
+      fileKey:    widget.evidence.id,
+      passphrase: widget.passphrase,
+    );
+    if (!mounted) return;
+    if (bytes == null) {
+      setState(() { _loading = false; _error = true; });
+      return;
+    }
+
+    if (_isAudio) {
+      // Write to temp file so just_audio can play it
+      final dir  = await getTemporaryDirectory();
+      final path = '${dir.path}/preview_${widget.evidence.id.hashCode}.m4a';
+      await File(path).writeAsBytes(bytes);
+      if (!mounted) return;
+      _player = AudioPlayer();
+      _player!.playerStateStream.listen((s) {
+        if (!mounted) return;
+        final playing = s.playing && s.processingState != ProcessingState.completed;
+        setState(() => _isPlaying = playing);
+        playing ? _waveController.repeat(reverse: true) : _waveController.stop();
+      });
+      setState(() { _loading = false; _audioPath = path; });
+    } else {
+      setState(() { _loading = false; _imageBytes = bytes; });
+    }
+  }
+
+  Future<void> _togglePlay() async {
+    final player = _player;
+    final path   = _audioPath;
+    if (player == null || path == null) return;
+    if (_isPlaying) {
+      await player.pause();
+    } else {
+      await player.setFilePath(path);
+      await player.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onClose,
+      child: Container(
+        color: const Color(0xF2000000),
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0x08FFFFFF),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: const Color(0x1AFFFFFF)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    children: [
+                      _isAudio
+                          ? _ArchiveAudioPreview(
+                              isPlaying:      _isPlaying,
+                              waveController: _waveController,
+                              onToggle:       _togglePlay,
+                              loading:        _loading,
+                              error:          _error,
+                              canPlay:        _audioPath != null,
+                            )
+                          : _ArchiveImagePreview(
+                              loading:    _loading,
+                              error:      _error,
+                              imageBytes: _imageBytes,
+                            ),
+                      // Close button
+                      Positioned(
+                        top: 24, right: 24,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: widget.onClose,
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0x66000000),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0x1AFFFFFF)),
+                            ),
+                            child: const Icon(CupertinoIcons.xmark, size: 20, color: Color(0x66FFFFFF)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Info
+                  Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(CupertinoIcons.lock, size: 12, color: Color(0xCC34D399)),
+                            const SizedBox(width: 8),
+                            Text(
+                              _loading ? '正在解密...' : (_error ? '解密失败' : '已通过加密存储'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _error ? const Color(0xCCEF4444) : const Color(0xCC34D399),
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const SizedBox(height: 1, child: ColoredBox(color: Color(0x0DFFFFFF))),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.evidence.timestamp,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0x66FFFFFF),
+                            fontFamily: 'Courier',
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+}
+
+// ── Image preview area ────────────────────────────────────────
+
+class _ArchiveImagePreview extends StatelessWidget {
+  final bool loading;
+  final bool error;
+  final Uint8List? imageBytes;
+
+  const _ArchiveImagePreview({
+    required this.loading,
+    required this.error,
+    required this.imageBytes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft:  Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+        child: _body(),
+      ),
+    );
+  }
+
+  Widget _body() {
+    if (loading) {
+      return const ColoredBox(
+        color: Color(0x14FFFFFF),
+        child: Center(child: CupertinoActivityIndicator()),
+      );
+    }
+    if (error || imageBytes == null) {
+      return const ColoredBox(
+        color: Color(0x14FFFFFF),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(CupertinoIcons.exclamationmark_circle, size: 36, color: Color(0x66EF4444)),
+              SizedBox(height: 8),
+              Text('无法解密文件', style: TextStyle(fontSize: 13, color: Color(0x66FFFFFF))),
+            ],
+          ),
+        ),
+      );
+    }
+    return Image.memory(imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+  }
+}
+
+// ── Audio preview area ────────────────────────────────────────
+
+class _ArchiveAudioPreview extends StatelessWidget {
+  final bool isPlaying;
+  final AnimationController waveController;
+  final VoidCallback onToggle;
+  final bool loading;
+  final bool error;
+  final bool canPlay;
+
+  const _ArchiveAudioPreview({
+    required this.isPlaying,
+    required this.waveController,
+    required this.onToggle,
+    required this.loading,
+    required this.error,
+    required this.canPlay,
+  });
+
+  static const _kWaveHeights = [12.0, 20.0, 32.0, 24.0, 40.0, 28.0, 16.0, 36.0, 44.0,
+                                  38.0, 22.0, 34.0, 18.0, 42.0, 26.0, 30.0, 14.0, 38.0];
+
+  double _animatedFactor(double t, int index) {
+    final phase = (index / 18) * 2 * math.pi;
+    return (math.sin(t * 2 * math.pi + phase) + 1) / 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A1A12),
+        borderRadius: BorderRadius.only(
+          topLeft:  Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D2B1A),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x4034D399), width: 1.5),
+            ),
+            child: const Icon(CupertinoIcons.mic, size: 36, color: Color(0xFF34D399)),
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            height: 48,
+            child: loading
+                ? const Center(child: CupertinoActivityIndicator())
+                : AnimatedBuilder(
+                    animation: waveController,
+                    builder: (context, _) {
+                      final t = waveController.value;
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: List.generate(18, (i) {
+                          final double baseH = _kWaveHeights[i % _kWaveHeights.length];
+                          final double h = isPlaying
+                              ? baseH * (0.4 + 0.6 * _animatedFactor(t, i))
+                              : 4.0;
+                          return Container(
+                            width: 3, height: h,
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF34D399),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: 24),
+          if (error)
+            Container(
+              width: double.infinity, height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0x1AEF4444),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: const Color(0x33EF4444)),
+              ),
+              child: const Center(
+                child: Text('解密失败', style: TextStyle(fontSize: 14, color: Color(0x66EF4444))),
+              ),
+            )
+          else if (canPlay)
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: onToggle,
+              child: Container(
+                width: double.infinity, height: 52,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.white,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: Center(
+                  child: Text(
+                    isPlaying ? '暂停' : '播放录音',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: CupertinoColors.black, letterSpacing: 1),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity, height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0x1AFFFFFF),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: const Center(child: CupertinoActivityIndicator()),
+            ),
+        ],
+      ),
     );
   }
 }

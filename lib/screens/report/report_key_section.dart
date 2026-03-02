@@ -49,18 +49,16 @@ class ReportKeySection extends StatelessWidget {
         const SizedBox(height: 16),
         CupertinoTextField(
           controller: controller,
-          obscureText: true,
+          obscureText: false,
           placeholder: '输入访问密钥以锁定档案',
           style: const TextStyle(
             color: Color(0xFFFFFFFF),
             fontSize: 14,
-            fontFamily: 'Courier',
-            letterSpacing: 8,
+            letterSpacing: 4,
           ),
           placeholderStyle: const TextStyle(
             color: Color(0x33FFFFFF),
             fontSize: 14,
-            fontFamily: 'Courier',
             letterSpacing: 1,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

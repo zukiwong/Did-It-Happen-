@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'config.dart';
 import 'providers/investigation_provider.dart';
 import 'screens/splash/splash_screen.dart'; // also exports UserChoice
 import 'screens/checklist/trace_checklist_screen.dart';
@@ -12,15 +13,12 @@ import 'screens/sanctuary/mind_sanctuary_screen.dart';
 import 'screens/archive/archive_access_screen.dart';
 import 'screens/archive/trace_archive_screen.dart';
 
-const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: _supabaseUrl,
-    anonKey: _supabaseAnonKey,
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
 
   runApp(const ProviderScope(child: App()));
