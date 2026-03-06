@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct TraceReportScreen: View {
     let onBack: () -> Void
@@ -276,7 +277,7 @@ struct TraceReportScreen: View {
                     Text("档案已加密锁定")
                         .font(.system(size: 16, weight: .light))
                         .foregroundStyle(Color.white.opacity(0.70))
-                    Text("凭密钥可在"查看历史记录"中解密访问")
+                    Text("凭密钥可在「查看历史记录」中解密访问")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.white.opacity(0.30))
                         .multilineTextAlignment(.center)

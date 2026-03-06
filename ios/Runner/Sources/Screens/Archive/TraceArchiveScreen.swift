@@ -143,24 +143,30 @@ struct TraceArchiveScreen: View {
                 .foregroundStyle(Color.white.opacity(0.80))
 
             if let r = record {
-                let fmt = DateFormatter(); fmt.dateFormat = "yyyy.MM.dd HH:mm"
-                let flagCount = r.results.values.filter { $0 == "flagged" }.count
-                let evCount   = r.evidences.values.reduce(0) { $0 + $1.count }
-
-                VStack(alignment: .leading, spacing: 32) {
-                    logEntry(date: fmt.string(from: r.completedAt), title: "开始观察记录", isLatest: false)
-                    if flagCount > 0 {
-                        logEntry(date: fmt.string(from: r.completedAt), title: "发现 \(flagCount) 项异常", isLatest: false)
-                    }
-                    logEntry(
-                        date: fmt.string(from: r.completedAt),
-                        title: evCount > 0 ? "已上传 \(evCount) 份加密文件" : "档案已加密锁定",
-                        isLatest: true
-                    )
-                }
-                .padding(.leading, 8)
+                logTimeline(record: r)
             }
         }
+    }
+
+    @ViewBuilder
+    private func logTimeline(record r: InvestigationRecord) -> some View {
+        let fmt = DateFormatter()
+        let _ = { fmt.dateFormat = "yyyy.MM.dd HH:mm" }()
+        let flagCount = r.results.values.filter { $0 == "flagged" }.count
+        let evCount   = r.evidences.values.reduce(0) { $0 + $1.count }
+
+        VStack(alignment: .leading, spacing: 32) {
+            logEntry(date: fmt.string(from: r.completedAt), title: "开始观察记录", isLatest: false)
+            if flagCount > 0 {
+                logEntry(date: fmt.string(from: r.completedAt), title: "发现 \(flagCount) 项异常", isLatest: false)
+            }
+            logEntry(
+                date: fmt.string(from: r.completedAt),
+                title: evCount > 0 ? "已上传 \(evCount) 份加密文件" : "档案已加密锁定",
+                isLatest: true
+            )
+        }
+        .padding(.leading, 8)
     }
 
     @ViewBuilder

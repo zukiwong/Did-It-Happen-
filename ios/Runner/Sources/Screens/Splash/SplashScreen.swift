@@ -1,290 +1,456 @@
 import SwiftUI
 
 // MARK: - SplashScreen
-// Replicates the Flutter animation timeline:
-//   0.0–0.28  4 dots stagger in
-//   0.15–0.38 dots turn white → black
-//   0.38–0.60 dots converge to 1 golden center dot
-//   0.50–0.62 blobs + dots fade out
-//   0.56–0.76 golden dot stretches into vertical divider line
-//   0.70–0.98 labels + bottom buttons slide in
+// Exact replication of the Flutter animation timeline:
+//
+// Two loops:
+//   bgPhase — blob background, 4500ms repeat(reverse:true) with easeInOutSine/Cubic/Quad curves
+//   t       — main sequence, 5500ms forward-only, 0→1
+//
+// Timeline (t = 0→1):
+//   0.02–0.16/0.20/0.24/0.28  4 dots stagger fade in (easeOut)
+//   0.15–0.38  dot color: white → black (colorSpin, easeInOut)
+//   0.38–0.60  dots converge + color → gold 0xFFB800 (merge, easeInCubic)
+//   0.50–0.62  blobs fade out (easeIn)
+//   0.54–0.62  dots fade out (easeIn)
+//   0.58–0.72  hairline divider grows from center (easeOut), 1px wide, gold→dim-white
+//   0.70–0.98  left/right labels + bottom link slide in (easeOut)
 
 struct SplashScreen: View {
     let onChoice: (UserChoice) -> Void
 
-    // Animation progress 0→1 over 6 seconds
-    @State private var t        : CGFloat = 0
-    @State private var bgPhase  : CGFloat = 0  // blob loop (4.5s)
-    @State private var pressed  : UserChoice? = nil
+    // Main sequence 0→1 over 5500ms
+    @State private var t: CGFloat = 0
+    // Blob background phase 0→1→0 looping (easeInOutSine/Cubic/Quad applied per blob)
+    @State private var bgRaw: CGFloat = 0   // linear 0→1, reversed
+    @State private var bgForward = true
 
-    private let totalDuration   : Double = 6.0
-    private let blobDuration    : Double = 4.5
+    @State private var pressedLeft  = false
+    @State private var pressedRight = false
+
+    // Derived blob values (animated per-frame via bgRaw)
+    // Using easeInOutSine for b1, easeInOutCubic for b2, easeInOutQuad for b3
+    private func b1(_ raw: CGFloat) -> CGFloat { easeInOutSine(raw) }
+    private func b2(_ raw: CGFloat) -> CGFloat { easeInOutCubic(raw) }
+    private func b3(_ raw: CGFloat) -> CGFloat { easeInOutQuad(raw) }
 
     var body: some View {
         GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let bv1 = b1(bgRaw)
+            let bv2 = b2(bgRaw)
+            let bv3 = b3(bgRaw)
+
+            // Blob positions — exact match to Flutter lerpDouble values
+            let b1cx = lerp(-0.15 * w,  0.55 * w, bv1)
+            let b1cy = lerp( 0.95 * h,  0.35 * h, bv1)
+            let b1r  = lerp(240, 320, bv1)
+            let b1sc = lerp(0.97, 1.05, bv1)
+
+            let b2cx = lerp(1.10 * w,  0.42 * w, bv2)
+            let b2cy = lerp(0.75 * h,  0.45 * h, bv2)
+            let b2r  = lerp(200, 280, bv2)
+            let b2sc = lerp(1.03, 0.96, bv2)
+
+            let b3cx = lerp(0.22 * w,  0.75 * w, bv3)
+            let b3cy = lerp(-0.08 * h, 0.22 * h, bv3)
+            let b3r  = lerp(170, 230, bv3)
+            let b3sc = lerp(0.98, 1.06, bv3)
+
+            // Blob opacity: fade out t 0.50→0.62
+            let blobOpacity = 1.0 - iv(t, 0.50, 0.62, curve: .easeIn)
+
+            // 4 dots stagger fade-in
+            let dotFade: [CGFloat] = [
+                iv(t, 0.02, 0.16, curve: .easeOut),
+                iv(t, 0.06, 0.20, curve: .easeOut),
+                iv(t, 0.10, 0.24, curve: .easeOut),
+                iv(t, 0.14, 0.28, curve: .easeOut),
+            ]
+            // Convergence
+            let merge      = iv(t, 0.38, 0.60, curve: .easeIn)
+            let colorSpin  = iv(t, 0.15, 0.38, curve: .easeInOut)
+            let colorMerge = iv(t, 0.38, 0.60, curve: .easeOut)
+            // white(1.0) → black(0.08) → gold
+            let spinR = lerp(1.0, 0.08, colorSpin)
+            let spinG = lerp(1.0, 0.08, colorSpin)
+            let spinB = lerp(1.0, 0.08, colorSpin)
+            let dotR  = lerp(spinR, 1.0,   colorMerge)
+            let dotG  = lerp(spinG, 0.722, colorMerge)
+            let dotB  = lerp(spinB, 0.0,   colorMerge)
+            let dotColor = Color(red: dotR, green: dotG, blue: dotB)
+            let goldGlow = colorMerge > 0.1
+
+            // Dot opacity: fade out t 0.54→0.62
+            let dotOpacity = 1.0 - iv(t, 0.54, 0.62, curve: .easeIn)
+
+            // Line
+            let stretch     = iv(t, 0.58, 0.72, curve: .easeOut)
+            let lineH       = lerp(0, h * 0.64, stretch)
+            let lineOpacity = iv(t, 0.58, 0.65, curve: .easeOut)
+            // gold 0xFFB800 → 0x38FFFFFF
+            let lineR2 = lerp(1.0,  1.0,  stretch)
+            let lineG2 = lerp(0.72, 1.0,  stretch)
+            let lineB2 = lerp(0.0,  1.0,  stretch)
+            let lineA  = lerp(1.0,  0.22, stretch)
+            let lineColor = Color(red: lineR2, green: lineG2, blue: lineB2).opacity(lineA)
+
+            // Content reveal
+            let content      = iv(t, 0.70, 0.98, curve: .easeOut)
+            let contentSlide = lerp(24.0, 0.0, content)
+
+            // Dot corners (spread=34, dotSize=11)
+            let spread: CGFloat = 34
+            let corners: [CGSize] = [
+                CGSize(width: -spread, height: -spread),
+                CGSize(width:  spread, height: -spread),
+                CGSize(width: -spread, height:  spread),
+                CGSize(width:  spread, height:  spread),
+            ]
+
             ZStack {
-                // ── Blob background ──────────────────────────────
-                blobBackground(geo: geo)
+                Color(hex: 0x080808).ignoresSafeArea()
 
-                // ── Center animation ─────────────────────────────
-                centerAnimation(geo: geo)
+                // ── Blobs (warm orange/pink/gold) ──────────────────
+                if blobOpacity > 0 {
+                    ZStack {
+                        BlobView(
+                            cx: b1cx, cy: b1cy, radius: b1r, scale: b1sc,
+                            opacity: 0.72, blurSigma: 90,
+                            innerColor: Color(hex: 0xFF8A3D),
+                            midColor:   Color(hex: 0xFFB199)
+                        )
+                        BlobView(
+                            cx: b2cx, cy: b2cy, radius: b2r, scale: b2sc,
+                            opacity: 0.58, blurSigma: 85,
+                            innerColor: Color(hex: 0xFF6FAF),
+                            midColor:   Color(hex: 0xFFC3E0)
+                        )
+                        BlobView(
+                            cx: b3cx, cy: b3cy, radius: b3r, scale: b3sc,
+                            opacity: 0.35, blurSigma: 80,
+                            innerColor: Color(hex: 0xFFD36B),
+                            midColor:   Color(hex: 0xFFE7A6)
+                        )
+                    }
+                    .opacity(blobOpacity)
 
-                // ── Bottom choice buttons ─────────────────────────
-                VStack {
-                    Spacer()
-                    bottomButtons(geo: geo)
+                    // Vignette
+                    RadialGradient(
+                        colors: [Color.clear, Color.black.opacity(0.32)],
+                        center: .center,
+                        startRadius: min(w, h) * 0.55,
+                        endRadius:   max(w, h) * 0.9
+                    )
+                    .ignoresSafeArea()
+                    .opacity(blobOpacity)
+                    .allowsHitTesting(false)
+                }
+
+                // ── Choice ambient background (cold teal + deep rose) ──
+                if content > 0 {
+                    ZStack {
+                        // Left: cold teal
+                        BlurredCircle(color: Color(hex: 0x0D3D50), size: w * 1.1, blur: 110, opacity: 0.55)
+                            .offset(x: -w * 0.25 - w * 0.55 + w/2, y: h * 0.5 - h * 0.05 - w * 0.55)
+                        // Right: deep rose
+                        BlurredCircle(color: Color(hex: 0x3D0A18), size: w * 1.0, blur: 110, opacity: 0.55)
+                            .offset(x: w * 0.25 + w * 0.5 - w/2, y: -h * 0.05 - w * 0.5)
+                    }
+                    .opacity(content * 0.9)
+                    .allowsHitTesting(false)
+                }
+
+                // ── 4 corner dots ──────────────────────────────────
+                if t < 0.63 {
+                    ZStack {
+                        ForEach(0..<4, id: \.self) { i in
+                            let dx = lerp(corners[i].width,  0, merge)
+                            let dy = lerp(corners[i].height, 0, merge)
+                            let sc = lerp(1.0, 0.55, merge)
+                            Circle()
+                                .fill(dotColor)
+                                .frame(width: 11, height: 11)
+                                .shadow(
+                                    color: goldGlow ? Color(hex: 0xFFB800).opacity(colorMerge * 0.6) : .clear,
+                                    radius: 12
+                                )
+                                .scaleEffect(sc)
+                                .offset(x: dx, y: dy)
+                                .opacity(dotFade[i] * dotOpacity)
+                        }
+                    }
+                }
+
+                // ── Hairline divider ───────────────────────────────
+                if t >= 0.56 {
+                    Rectangle()
+                        .fill(lineColor)
+                        .frame(width: 1, height: lineH)
+                        .opacity(lineOpacity)
+                }
+
+                // ── Left half tap zone + label ─────────────────────
+                if t >= 0.68 {
+                    HStack(spacing: 0) {
+                        // Left
+                        ZStack {
+                            if pressedLeft {
+                                RadialGradient(
+                                    colors: [Color(hex: 0x1A4A5E).opacity(0.35), .clear],
+                                    center: UnitPoint(x: 0.35, y: 0.5),
+                                    startRadius: 0, endRadius: w * 0.7
+                                )
+                                .animation(.easeInOut(duration: 0.15), value: pressedLeft)
+                            }
+                            SplashLabel(line1: "TA", line2: "出轨了", bright: pressedLeft)
+                                .offset(x: -contentSlide)
+                                .opacity(content)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in pressedLeft = true }
+                                .onEnded { _ in
+                                    pressedLeft = false
+                                    onChoice(.partner)
+                                }
+                        )
+                        .simultaneousGesture(
+                            TapGesture().onEnded { onChoice(.partner) }
+                        )
+
+                        // Right
+                        ZStack {
+                            if pressedRight {
+                                RadialGradient(
+                                    colors: [Color(hex: 0x4A1A24).opacity(0.35), .clear],
+                                    center: UnitPoint(x: 0.65, y: 0.5),
+                                    startRadius: 0, endRadius: w * 0.7
+                                )
+                                .animation(.easeInOut(duration: 0.15), value: pressedRight)
+                            }
+                            SplashLabel(line1: "我", line2: "出轨了", bright: pressedRight)
+                                .offset(x: contentSlide)
+                                .opacity(content)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in pressedRight = true }
+                                .onEnded { _ in
+                                    pressedRight = false
+                                    onChoice(.self)
+                                }
+                        )
+                        .simultaneousGesture(
+                            TapGesture().onEnded { onChoice(.self) }
+                        )
+                    }
+                    .ignoresSafeArea()
+                }
+
+                // ── Bottom records link ────────────────────────────
+                if t >= 0.68 {
+                    VStack {
+                        Spacer()
+                        RecordsLink(onTap: { onChoice(.records) })
+                            .offset(y: lerp(16, 0, content))
+                            .opacity(content)
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.black)
-            .ignoresSafeArea()
+            .frame(width: w, height: h)
         }
+        .ignoresSafeArea()
         .onAppear { startAnimations() }
     }
 
-    // MARK: - Blob background
-
-    @ViewBuilder
-    private func blobBackground(geo: GeometryProxy) -> some View {
-        let w = geo.size.width
-        let h = geo.size.height
-        let b1 = 0.5 + 0.5 * sin(bgPhase * 2 * .pi)
-        let b2 = 0.5 + 0.5 * sin(bgPhase * 2 * .pi + 2.1)
-        let b3 = 0.5 + 0.5 * sin(bgPhase * 2 * .pi + 4.2)
-
-        let blobsAlpha = 1 - iv(t, 0.50, 0.62)
-
-        ZStack {
-            // Blob 1 — top left, blue-purple
-            Ellipse()
-                .fill(
-                    RadialGradient(colors: [Color(hex: 0x1a1060).opacity(0.7), .clear],
-                                   center: .center, startRadius: 0, endRadius: w * 0.5)
-                )
-                .frame(width: w * 1.2, height: w * 1.2)
-                .offset(x: -w * 0.3 + w * 0.1 * CGFloat(b1),
-                        y: -h * 0.2 + h * 0.05 * CGFloat(b1))
-                .scaleEffect(0.8 + 0.2 * b1)
-
-            // Blob 2 — right
-            Ellipse()
-                .fill(
-                    RadialGradient(colors: [Color(hex: 0x0d2040).opacity(0.5), .clear],
-                                   center: .center, startRadius: 0, endRadius: w * 0.4)
-                )
-                .frame(width: w * 0.9, height: w * 0.9)
-                .offset(x: w * 0.35 + w * 0.08 * CGFloat(b2),
-                        y: h * 0.1 + h * 0.05 * CGFloat(b2))
-                .scaleEffect(0.9 + 0.15 * b2)
-
-            // Blob 3 — bottom center
-            Ellipse()
-                .fill(
-                    RadialGradient(colors: [Color(hex: 0x160830).opacity(0.4), .clear],
-                                   center: .center, startRadius: 0, endRadius: w * 0.35)
-                )
-                .frame(width: w * 0.8, height: w * 0.8)
-                .offset(x: w * 0.05 + w * 0.06 * CGFloat(b3),
-                        y: h * 0.3 + h * 0.04 * CGFloat(b3))
-        }
-        .opacity(blobsAlpha)
-    }
-
-    // MARK: - Center animation
-
-    @ViewBuilder
-    private func centerAnimation(geo: GeometryProxy) -> some View {
-        let w = geo.size.width
-
-        // 4 dots positions (relative to center)
-        let radius: CGFloat = 24
-        let dotPositions: [CGPoint] = [
-            CGPoint(x: -radius, y: -radius),
-            CGPoint(x:  radius, y: -radius),
-            CGPoint(x: -radius, y:  radius),
-            CGPoint(x:  radius, y:  radius),
-        ]
-
-        ZStack {
-            // ── 4 dots ───────────────────────────────────────────
-            ForEach(0..<4, id: \.self) { i in
-                let delay    = Double(i) * 0.06  // stagger within [0.02,0.28]
-                let fadeIn   = iv(t, 0.02 + delay, 0.28 + delay)
-                let whitePct = iv(t, 0.15, 0.38, curve: .easeInOut)
-                let dotColor = Color.white.opacity(0.3 + 0.7 * whitePct)
-
-                // Converge to center
-                let convergePct = iv(t, 0.38, 0.60, curve: .easeInOut)
-                let pos = dotPositions[i]
-                let x   = pos.x * (1 - convergePct)
-                let y   = pos.y * (1 - convergePct)
-
-                let dotsAlpha = 1 - iv(t, 0.54, 0.62)
-
-                Circle()
-                    .fill(dotColor)
-                    .frame(width: 8, height: 8)
-                    .offset(x: x, y: y)
-                    .opacity(fadeIn * dotsAlpha)
-            }
-
-            // ── Golden center dot ────────────────────────────────
-            let goldenIn    = iv(t, 0.38, 0.50, curve: .easeOut)
-            let goldenAlpha = goldenIn * (1 - iv(t, 0.54, 0.62))
-
-            // Stretch into vertical line
-            let stretchPct  = iv(t, 0.56, 0.76, curve: .easeInOut)
-            let lineHeight  = 8 + (geo.size.height * 0.35 - 8) * stretchPct
-            let lineWidth   = 8 * (1 - stretchPct) + 1 * stretchPct
-
-            RoundedRectangle(cornerRadius: max(0.5, 4 * (1 - stretchPct)))
-                .fill(Color.gold)
-                .frame(width: lineWidth, height: lineHeight)
-                .opacity(goldenAlpha + iv(t, 0.54, 0.62) * iv(t, 0.56, 0.76))
-
-            // ── Labels ───────────────────────────────────────────
-            let labelsPct = iv(t, 0.70, 0.90, curve: .easeOut)
-            labelsView(geo: geo, progress: labelsPct)
-        }
-    }
-
-    @ViewBuilder
-    private func labelsView(geo: GeometryProxy, progress: CGFloat) -> some View {
-        HStack(spacing: 0) {
-            // Left label — "他出了吗"
-            VStack(spacing: 8) {
-                Text("他出了吗")
-                    .font(.system(size: 18, weight: .light))
-                    .foregroundStyle(Color.white.opacity(0.90))
-                Text("TRACE THE TRUTH")
-                    .font(.mono(8, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.30))
-                    .kerning(3)
-            }
-            .frame(maxWidth: .infinity)
-            .offset(x: -20 * (1 - progress))
-
-            // Right label — "我出了吗"
-            VStack(spacing: 8) {
-                Text("我出了吗")
-                    .font(.system(size: 18, weight: .light))
-                    .foregroundStyle(Color.white.opacity(0.90))
-                Text("FACE YOURSELF")
-                    .font(.mono(8, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.30))
-                    .kerning(3)
-            }
-            .frame(maxWidth: .infinity)
-            .offset(x: 20 * (1 - progress))
-        }
-        .opacity(progress)
-        .padding(.horizontal, 28)
-    }
-
-    // MARK: - Bottom buttons
-
-    @ViewBuilder
-    private func bottomButtons(geo: GeometryProxy) -> some View {
-        let progress = iv(t, 0.78, 0.98, curve: .easeOut)
-
-        VStack(spacing: 12) {
-            // Partner button
-            choiceButton(
-                title: "查找出轨证据",
-                subtitle: "INVESTIGATE",
-                choice: .partner,
-                isPrimary: true,
-                progress: progress
-            )
-
-            HStack(spacing: 12) {
-                // Self button
-                choiceButton(
-                    title: "我是否出轨了",
-                    subtitle: "SELF-CHECK",
-                    choice: .self,
-                    isPrimary: false,
-                    progress: progress
-                )
-                // Records button
-                choiceButton(
-                    title: "查看历史记录",
-                    subtitle: "ARCHIVE",
-                    choice: .records,
-                    isPrimary: false,
-                    progress: progress
-                )
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 48)
-        .opacity(progress)
-        .offset(y: 30 * (1 - progress))
-    }
-
-    @ViewBuilder
-    private func choiceButton(
-        title: String, subtitle: String,
-        choice: UserChoice, isPrimary: Bool,
-        progress: CGFloat
-    ) -> some View {
-        Button {
-            onChoice(choice)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: isPrimary ? 16 : 13, weight: .medium))
-                        .foregroundStyle(isPrimary ? Color.black : Color.white.opacity(0.80))
-                    Text(subtitle)
-                        .font(.mono(8, weight: .bold))
-                        .foregroundStyle(isPrimary ? Color.black.opacity(0.40) : Color.white.opacity(0.30))
-                        .kerning(3)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isPrimary ? Color.black.opacity(0.40) : Color.white.opacity(0.30))
-            }
-            .padding(.horizontal, 24)
-            .frame(height: isPrimary ? 64 : 56)
-            .background(isPrimary ? Color.white : Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: isPrimary ? 24 : 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: isPrimary ? 24 : 20)
-                    .stroke(isPrimary ? Color.clear : Color.white.opacity(0.12), lineWidth: 1)
-            )
-        }
-        .scaleEffect(pressed == choice ? 0.97 : 1.0)
-        .animation(.spring(duration: 0.15), value: pressed)
-        ._onButtonGesture(pressing: { pressing in
-            pressed = pressing ? choice : nil
-        }, perform: {})
-    }
-
-    // MARK: - Helpers
-
-    /// Interpolates t from [begin,end] → [0,1], clamped.
-    private func iv(_ t: CGFloat, _ begin: Double, _ end: Double,
-                    curve: Animation = .linear) -> CGFloat {
-        guard end > begin else { return t >= end ? 1 : 0 }
-        return CGFloat(((t - begin) / (end - begin)).clamped(to: 0...1))
-    }
+    // MARK: - Animation helpers
 
     private func startAnimations() {
-        // Blob loop
-        withAnimation(.linear(duration: blobDuration).repeatForever(autoreverses: false)) {
-            bgPhase = 1
+        // Main sequence: 5500ms linear
+        withAnimation(.linear(duration: 5.5)) { t = 1 }
+
+        // Blob loop: 4500ms, reverse=true equivalent — animate bgRaw 0→1→0 repeatedly
+        animateBlobCycle()
+    }
+
+    private func animateBlobCycle() {
+        let target: CGFloat = bgForward ? 1 : 0
+        withAnimation(.easeInOut(duration: 4.5)) {
+            bgRaw = target
         }
-        // Main sequence
-        withAnimation(.linear(duration: totalDuration)) {
-            t = 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+            bgForward.toggle()
+            animateBlobCycle()
+        }
+    }
+
+    // Interpolate t ∈ [begin,end] → [0,1]
+    private func iv(_ t: CGFloat, _ begin: Double, _ end: Double, curve: AnimCurve = .linear) -> CGFloat {
+        guard end > begin else { return t >= CGFloat(end) ? 1 : 0 }
+        let raw = min(1, max(0, (t - CGFloat(begin)) / CGFloat(end - begin)))
+        return curve.apply(raw)
+    }
+
+    private func lerp(_ a: CGFloat, _ b: CGFloat, _ t: CGFloat) -> CGFloat {
+        a + (b - a) * t
+    }
+
+    private func easeInOutSine(_ t: CGFloat) -> CGFloat {
+        -(cos(.pi * t) - 1) / 2
+    }
+    private func easeInOutCubic(_ t: CGFloat) -> CGFloat {
+        t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2
+    }
+    private func easeInOutQuad(_ t: CGFloat) -> CGFloat {
+        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+    }
+}
+
+// MARK: - Curve helper
+
+enum AnimCurve {
+    case linear, easeIn, easeOut, easeInOut
+
+    func apply(_ t: CGFloat) -> CGFloat {
+        switch self {
+        case .linear:   return t
+        case .easeIn:   return t * t
+        case .easeOut:  return 1 - (1 - t) * (1 - t)
+        case .easeInOut: return t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
         }
     }
 }
 
-extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
+// MARK: - Blob view (positioned, blurred, radial gradient)
+
+struct BlobView: View {
+    let cx, cy, radius, scale, opacity, blurSigma: CGFloat
+    let innerColor, midColor: Color
+
+    var body: some View {
+        let size = radius * 2
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [innerColor, midColor, midColor.opacity(0)],
+                        center: UnitPoint(x: 0.4, y: 0.425),
+                        startRadius: 0,
+                        endRadius: radius * 0.95
+                    )
+                )
+                .frame(width: size, height: size)
+                .blur(radius: blurSigma)
+                .scaleEffect(scale)
+                .opacity(opacity)
+        }
+        .frame(width: size, height: size)
+        .position(x: cx, y: cy)
+    }
+}
+
+// MARK: - BlurredCircle (static ambient)
+
+struct BlurredCircle: View {
+    let color: Color
+    let size, blur, opacity: CGFloat
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: size, height: size)
+            .blur(radius: blur)
+            .opacity(opacity)
+    }
+}
+
+// MARK: - Splash label
+
+struct SplashLabel: View {
+    let line1, line2: String
+    let bright: Bool
+
+    var body: some View {
+        let op: Double = bright ? 1.0 : 0.78
+        VStack(spacing: 6) {
+            Text(line1)
+                .font(.system(size: 36, weight: .regular))
+                .kerning(8)
+                .foregroundStyle(Color.white.opacity(op))
+            Text(line2)
+                .font(.system(size: 15, weight: .regular))
+                .kerning(10)
+                .foregroundStyle(Color.white.opacity(op * 0.55))
+        }
+    }
+}
+
+// MARK: - Records link (bottom waveform + text)
+
+struct RecordsLink: View {
+    let onTap: () -> Void
+    @State private var wavePhase: CGFloat = 0
+
+    var body: some View {
+        Button(action: onTap) {
+            ZStack(alignment: .bottom) {
+                LinearGradient(
+                    colors: [Color.black.opacity(0.73), .clear],
+                    startPoint: .bottom, endPoint: .top
+                )
+                .frame(height: 96)
+
+                VStack(spacing: 10) {
+                    // Animated waveform bars
+                    HStack(alignment: .bottom, spacing: 2) {
+                        ForEach(0..<18, id: \.self) { i in
+                            AnimatedBar(index: i)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Text("查看记录")
+                            .font(.system(size: 15, weight: .regular))
+                            .kerning(5)
+                            .foregroundStyle(Color.white.opacity(0.60))
+                        Text("→")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.white.opacity(0.60))
+                    }
+
+                    Spacer().frame(height: 28)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct AnimatedBar: View {
+    let index: Int
+    @State private var height: CGFloat = 4
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.white.opacity(0.22 + Double(index % 3) * 0.15))
+            .frame(width: 2, height: height)
+            .onAppear {
+                let delay = Double(index) * 0.07
+                let dur   = 1.4 + Double(index) * 0.1
+                withAnimation(
+                    .easeInOut(duration: dur)
+                    .repeatForever(autoreverses: true)
+                    .delay(delay)
+                ) {
+                    height = CGFloat.random(in: 6...18)
+                }
+            }
     }
 }
