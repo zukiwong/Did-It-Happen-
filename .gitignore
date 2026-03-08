@@ -1,3 +1,9 @@
+# Claude Code
+.claude/
+
+# Local credentials — never commit
+ios/Runner/Sources/Services/Config.local.swift
+
 # Miscellaneous
 *.class
 *.log
