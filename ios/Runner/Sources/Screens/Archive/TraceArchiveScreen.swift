@@ -1,241 +1,340 @@
 import SwiftUI
+import PhotosUI
 
 struct TraceArchiveScreen: View {
     let onBack: () -> Void
 
     @Environment(InvestigationStore.self) private var store
-    @State private var searchQuery      = ""
-    @State private var selectedCategory = "全部"
-    @State private var selectedEvidence : EvidenceItem?
+    @State private var selectedGroup    : [EvidenceItem] = []
+    @State private var hasChanges       = false
+    @State private var isSaving         = false
 
-    private var record: InvestigationRecord? { store.record }
-    private var passphrase: String { store.passphrase ?? "" }
+    @State private var captureItemId    : String?
+    @State private var showCamera       = false
+    @State private var showPhotoPicker  = false
+    @State private var selectedPhotos   : [PhotosPickerItem] = []
+    @State private var isRecording      = false
+    @State private var uploadingItemId  : String?
 
-    private var categories: [String] {
-        ["全部"] + Array(Set(kPartnerQuestions.map(\.category))).sorted()
+    private var record    : InvestigationRecord? { store.record }
+    private var passphrase: String               { store.passphrase ?? "" }
+
+    private var groupedSections: [(category: String, questions: [QuestionItem])] {
+        var seen: [String] = []
+        for q in kPartnerQuestions { if !seen.contains(q.category) { seen.append(q.category) } }
+        return seen.map { cat in (cat, kPartnerQuestions.filter { $0.category == cat }) }
     }
 
-    private var filteredQuestions: [QuestionItem] {
-        kPartnerQuestions.filter { q in
-            let matchCat    = selectedCategory == "全部" || q.category == selectedCategory
-            let matchSearch = searchQuery.isEmpty || q.title.localizedCaseInsensitiveContains(searchQuery)
-            return matchCat && matchSearch
+    private var totalCount  : Int { kPartnerQuestions.count }
+    private var flagCount   : Int { record?.results.values.filter { $0 == "flagged" }.count ?? 0 }
+    private var checkedCount: Int { record?.results.count ?? 0 }
+    private var evCount     : Int { record?.evidences.values.reduce(0) { $0 + $1.count } ?? 0 }
+    private var riskScore   : Int {
+        guard totalCount > 0 else { return 0 }
+        return Int(Double(flagCount) / Double(totalCount) * 100)
+    }
+    private var riskLabel: String {
+        switch riskScore {
+        case 0..<20:  return "暂无明显异常"
+        case 20..<45: return "存在异常观察"
+        case 45..<70: return "异常信号较强"
+        default:      return "高度疑似出轨"
         }
     }
+    // Gold/amber accent — matches Figma design
+    private let accent = Color(hex: 0xE8A830)
 
     var body: some View {
-        ZStack {
-            Color(hex: 0x050505).ignoresSafeArea()
-            archiveBackground
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Color(hex: 0x0C0C0C).ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    archiveHeader
-                        .padding(.top, safeAreaTop + 12)
-                        .padding(.bottom, 40)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        heroCard
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 20)
 
-                    filterBar
-                        .padding(.bottom, 32)
-
-                    // Question items
-                    ForEach(filteredQuestions) { question in
-                        let resp = buildResponse(for: question)
-                        ArchiveRecordItem(
-                            question:   question,
-                            response:   resp,
-                            passphrase: passphrase,
-                            onTapEvidence: { ev in selectedEvidence = ev }
-                        )
-                        .padding(.bottom, 16)
+                        listSection
+                            .padding(.bottom, 100)
                     }
-
-                    observationLog
-                        .padding(.top, 32)
-                        .padding(.bottom, 120)
                 }
-                .padding(.horizontal, 24)
-            }
 
-            // Evidence overlay
-            if let ev = selectedEvidence {
-                EvidencePreviewOverlay(evidence: ev, passphrase: passphrase) {
-                    selectedEvidence = nil
-                }
-            }
-
-            // Save button
-            VStack {
-                Spacer()
                 saveButton
             }
-        }
-        .ignoresSafeArea()
-    }
-
-    // MARK: - Header
-
-    private var archiveHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.white.opacity(0.60))
-            }
-            .padding(.bottom, 8)
-
-            HStack(spacing: 12) {
-                Image(systemName: "clock").font(.system(size: 18)).foregroundStyle(Color.white.opacity(0.40))
-                Text("历史观察档案")
-                    .font(.system(size: 24, weight: .light))
-                    .foregroundStyle(Color.white.opacity(0.90))
-            }
-            Text("已验证访问")
-                .font(.mono(10, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.20))
-                .kerning(4)
-        }
-    }
-
-    // MARK: - Filter bar
-
-    private var filterBar: some View {
-        VStack(spacing: 12) {
-            // Search
-            HStack {
-                Image(systemName: "magnifyingglass").foregroundStyle(Color.white.opacity(0.20))
-                TextField("检索历史线索...", text: $searchQuery)
-                    .foregroundStyle(Color.white)
-                    .font(.system(size: 14))
-            }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .background(Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.10)))
-
-            // Category chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(categories, id: \.self) { cat in
-                        Button { selectedCategory = cat } label: {
-                            Text(cat)
-                                .font(.system(size: 10, weight: .bold))
-                                .kerning(3)
-                                .foregroundStyle(selectedCategory == cat ? Color.black : Color.white.opacity(0.40))
-                                .padding(.horizontal, 16).padding(.vertical, 8)
-                                .background(selectedCategory == cat ? Color.white : Color.white.opacity(0.05))
-                                .clipShape(Capsule())
-                                .overlay(Capsule().stroke(selectedCategory == cat ? Color.clear : Color.white.opacity(0.08)))
-                        }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.60))
                     }
+                }
+                ToolbarItem(placement: .principal) {
+                    Text("观察档案")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.60))
+                }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraView { url in
+                    showCamera = false
+                    if let url, let itemId = captureItemId {
+                        Task { await uploadFile(url: url, itemId: itemId) }
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotos, maxSelectionCount: 10, matching: .images)
+            .onChange(of: selectedPhotos) { _, items in
+                guard !items.isEmpty, let itemId = captureItemId else { return }
+                Task { await handlePhotoPickerItems(items, itemId: itemId) }
+            }
+        }
+        .overlay {
+            if !selectedGroup.isEmpty {
+                EvidencePreviewOverlay(items: selectedGroup, initialIndex: 0, passphrase: passphrase) {
+                    selectedGroup = []
+                }
+                .ignoresSafeArea()
+            }
+        }
+    }
+
+    // MARK: - Hero card
+
+    private var heroCard: some View {
+        ZStack {
+            // Background: dark with warm radial glow top-center
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(hex: 0x1A1008))
+
+            // Radial warm glow
+            GeometryReader { geo in
+                RadialGradient(
+                    colors: [
+                        Color(hex: 0xC05010).opacity(0.75),
+                        Color(hex: 0x8B3010).opacity(0.45),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0),
+                    startRadius: 0,
+                    endRadius: geo.size.width * 0.80
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+            }
+
+            VStack(spacing: 0) {
+                // Risk label
+                Text(riskLabel)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.70))
+                    .padding(.top, 28)
+                    .padding(.bottom, 12)
+
+                // Big score number
+                HStack(alignment: .top, spacing: 0) {
+                    Text("\(riskScore)")
+                        .font(.system(size: 88, weight: .semibold, design: .rounded))
+                        .foregroundStyle(accent)
+                        .lineLimit(1)
+                    Text("%")
+                        .font(.system(size: 32, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.70))
+                        .padding(.top, 18)
+                        .padding(.leading, 4)
+                }
+                .padding(.bottom, 20)
+
+                // Progress bar with dot indicator
+                GeometryReader { geo in
+                    let progress = CGFloat(riskScore) / 100.0
+                    let dotX = geo.size.width * progress
+
+                    ZStack(alignment: .leading) {
+                        // Track
+                        Capsule()
+                            .fill(Color.white.opacity(0.15))
+                            .frame(height: 3)
+
+                        // Fill
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.40), accent],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
+                            .frame(width: dotX, height: 3)
+
+                        // Dot indicator
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 14, height: 14)
+                            .shadow(color: accent.opacity(0.60), radius: 6)
+                            .offset(x: max(0, dotX - 7))
+                    }
+                }
+                .frame(height: 14)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+
+                // Stats row
+                HStack(spacing: 0) {
+                    statCell(value: "\(flagCount)", label: "异常项",
+                             color: flagCount > 0 ? Color.white : Color.white.opacity(0.40))
+                    Rectangle().fill(Color.white.opacity(0.10)).frame(width: 1, height: 36)
+                    statCell(value: "\(checkedCount)", label: "已记录", color: Color.white)
+                    Rectangle().fill(Color.white.opacity(0.10)).frame(width: 1, height: 36)
+                    statCell(value: "\(evCount)", label: "证据文件",
+                             color: evCount > 0 ? Color.white : Color.white.opacity(0.40))
+                }
+                .padding(.bottom, 24)
+            }
+        }
+        .frame(minHeight: 300)
+    }
+
+    private func statCell(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 5) {
+            Text(value)
+                .font(.system(size: 32, weight: .light, design: .rounded))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.white.opacity(0.35))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - List section
+
+    private var listSection: some View {
+        VStack(spacing: 0) {
+            ForEach(groupedSections, id: \.category) { section in
+                ForEach(section.questions) { question in
+                    let qid  = "\(question.id)"
+                    let resp = buildResponse(for: question)
+                    ArchiveRecordItem(
+                        question:        question,
+                        response:        resp,
+                        passphrase:      passphrase,
+                        uploadingItemId: uploadingItemId,
+                        isRecording:     isRecording && captureItemId == qid,
+                        accent:          accent,
+                        onTapEvidence:   { ev in selectedGroup = [ev] },
+                        onToggleResult:  { toggleResult(itemId: qid) },
+                        onCamera:        { captureItemId = qid; DispatchQueue.main.async { showCamera = true } },
+                        onPhotoPicker:   { captureItemId = qid; DispatchQueue.main.async { showPhotoPicker = true } },
+                        onAudio:         { Task { await handleAudio(itemId: qid) } }
+                    )
                 }
             }
         }
-    }
-
-    // MARK: - Observation log
-
-    private var observationLog: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Divider().background(Color.white.opacity(0.08))
-
-            Label("观察日志记录", systemImage: "clock")
-                .font(.system(size: 18, weight: .light))
-                .foregroundStyle(Color.white.opacity(0.80))
-
-            if let r = record {
-                logTimeline(record: r)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func logTimeline(record r: InvestigationRecord) -> some View {
-        let fmt = DateFormatter()
-        let _ = { fmt.dateFormat = "yyyy.MM.dd HH:mm" }()
-        let flagCount = r.results.values.filter { $0 == "flagged" }.count
-        let evCount   = r.evidences.values.reduce(0) { $0 + $1.count }
-
-        VStack(alignment: .leading, spacing: 32) {
-            logEntry(date: fmt.string(from: r.completedAt), title: "开始观察记录", isLatest: false)
-            if flagCount > 0 {
-                logEntry(date: fmt.string(from: r.completedAt), title: "发现 \(flagCount) 项异常", isLatest: false)
-            }
-            logEntry(
-                date: fmt.string(from: r.completedAt),
-                title: evCount > 0 ? "已上传 \(evCount) 份加密文件" : "档案已加密锁定",
-                isLatest: true
-            )
-        }
-        .padding(.leading, 8)
-    }
-
-    @ViewBuilder
-    private func logEntry(date: String, title: String, isLatest: Bool) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            Circle()
-                .fill(isLatest ? Color.emerald : Color.white.opacity(0.10))
-                .frame(width: 14, height: 14)
-                .shadow(color: isLatest ? Color.emerald.opacity(0.5) : .clear, radius: 8)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(date).font(.mono(10)).foregroundStyle(Color.white.opacity(0.20)).kerning(2)
-                Text(title)
-                    .font(.system(size: 13, weight: isLatest ? .medium : .light))
-                    .foregroundStyle(isLatest ? Color.emerald.opacity(0.90) : Color.white.opacity(0.50))
-            }
-        }
+        .background(Color(hex: 0x111111))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Save button
 
+    @ViewBuilder
     private var saveButton: some View {
-        Button {
-            Task { await store.save(); onBack() }
-        } label: {
-            HStack {
-                Text("更新观察结果")
-                    .font(.system(size: 11, weight: .black))
-                    .kerning(6)
-                    .foregroundStyle(Color.black)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.black)
+        if hasChanges || isSaving {
+            Button {
+                Task {
+                    isSaving = true
+                    await store.save()
+                    isSaving = false
+                    withAnimation { hasChanges = false }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if isSaving {
+                        ProgressView().tint(.black)
+                    } else {
+                        Text("保存更新")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.black)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.black.opacity(0.60))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(accent)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 64)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, safeAreaBottom + 24)
-        .background(
-            LinearGradient(colors: [.black, .clear], startPoint: .bottom, endPoint: .top)
+            .disabled(isSaving)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0x0C0C0C), Color(hex: 0x0C0C0C).opacity(0)],
+                    startPoint: .bottom, endPoint: .top
+                )
                 .ignoresSafeArea()
-        )
-    }
-
-    // MARK: - Background
-
-    private var archiveBackground: some View {
-        GeometryReader { geo in
-            RadialGradient(
-                colors: [Color(hex: 0x172554).opacity(0.15), .clear],
-                center: UnitPoint(x: 0.9, y: 0.1),
-                startRadius: 0,
-                endRadius: geo.size.width * 1.5
             )
-            .ignoresSafeArea()
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
-    // MARK: - Build response
+    // MARK: - Mutations
+
+    private func toggleResult(itemId: String) {
+        let current = store.record?.results[itemId]
+        let next    = current == "flagged" ? "normal" : "flagged"
+        store.markResult(itemId: itemId, status: next)
+        withAnimation { hasChanges = true }
+    }
+
+    private func handleAudio(itemId: String) async {
+        if isRecording && captureItemId == itemId {
+            isRecording   = false
+            captureItemId = nil
+            if let url = EvidenceService.stopRecording() {
+                await uploadFile(url: url, itemId: itemId)
+            }
+        } else {
+            EvidenceService.cancelRecording()
+            captureItemId = itemId
+            let ok = await EvidenceService.startRecording()
+            if ok { isRecording = true }
+        }
+    }
+
+    private func handlePhotoPickerItems(_ items: [PhotosPickerItem], itemId: String) async {
+        guard !items.isEmpty else { return }
+        for item in items {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + ".jpg")
+            try? data.write(to: url)
+            await uploadFile(url: url, itemId: itemId)
+        }
+        selectedPhotos = []
+    }
+
+    private func uploadFile(url: URL, itemId: String) async {
+        uploadingItemId = itemId
+        let result = await EvidenceService.uploadEvidence(url: url, passphrase: passphrase, itemId: itemId)
+        if case .success(let key) = result {
+            store.addEvidenceKey(itemId: itemId, fileKey: key)
+            store.markResult(itemId: itemId, status: "flagged")
+            withAnimation { hasChanges = true }
+        }
+        uploadingItemId = nil
+    }
 
     private func buildResponse(for question: QuestionItem) -> ArchiveResponse? {
-        let qid    = "\(question.id)"
-        let status = record?.results[qid]
-        guard status == "flagged" else { return nil }
-        let keys   = record?.evidences[qid] ?? []
-        let items  = keys.map { key in
+        let qid = "\(question.id)"
+        guard let status = record?.results[qid] else { return nil }
+        let keys  = record?.evidences[qid] ?? []
+        let items = keys.map { key in
             EvidenceItem(
                 id: key,
                 type: key.contains(".m4a") ? .audio : .image,
@@ -245,11 +344,8 @@ struct TraceArchiveScreen: View {
                 fileKey: key
             )
         }
-        return ArchiveResponse(isAnomaly: true, evidences: items)
+        return ArchiveResponse(isAnomaly: status == "flagged", evidences: items)
     }
-
-    private var safeAreaTop   : CGFloat { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.top    ?? 44 }
-    private var safeAreaBottom: CGFloat { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.bottom ?? 34 }
 }
 
 // MARK: - Archive response model
@@ -262,131 +358,210 @@ struct ArchiveResponse {
 // MARK: - Archive Record Item
 
 struct ArchiveRecordItem: View {
-    let question      : QuestionItem
-    let response      : ArchiveResponse?
-    let passphrase    : String
-    let onTapEvidence : (EvidenceItem) -> Void
+    let question        : QuestionItem
+    let response        : ArchiveResponse?
+    let passphrase      : String
+    let uploadingItemId : String?
+    let isRecording     : Bool
+    let accent          : Color
+    let onTapEvidence   : (EvidenceItem) -> Void
+    let onToggleResult  : () -> Void
+    let onCamera        : () -> Void
+    let onPhotoPicker   : () -> Void
+    let onAudio         : () -> Void
 
     @State private var expanded = false
 
-    private var isAnomaly  : Bool { response?.isAnomaly == true }
-    private var hasEvidence: Bool { !(response?.evidences.isEmpty ?? true) }
+    private var itemId     : String { "\(question.id)" }
+    private var isAnomaly  : Bool   { response?.isAnomaly == true }
+    private var isChecked  : Bool   { response != nil }
+    private var hasEvidence: Bool   { !(response?.evidences.isEmpty ?? true) }
+    private var isUploading: Bool   { uploadingItemId == itemId }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header row — tap to expand
-            Button { withAnimation(.spring(duration: 0.25)) { expanded.toggle() } } label: {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Text("#\(String(format: "%02d", question.id))")
-                                .font(.mono(8)).foregroundStyle(Color.white.opacity(0.20)).kerning(4)
-                            Text(question.category)
-                                .font(.system(size: 8, weight: .bold)).foregroundStyle(Color.white.opacity(0.30)).kerning(4)
-                                .lineLimit(1)
-                        }
+        VStack(spacing: 0) {
+            Button { withAnimation(.spring(duration: 0.22)) { expanded.toggle() } } label: {
+                HStack(alignment: .top, spacing: 14) {
+                    // Status dot
+                    Circle()
+                        .fill(isAnomaly ? accent : Color.white.opacity(0.18))
+                        .frame(width: 8, height: 8)
+                        .padding(.top, 6)
+
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(question.title)
-                            .font(.system(size: 14, weight: .light))
-                            .foregroundStyle(expanded ? Color.white.opacity(0.90) : Color.white.opacity(0.70))
-                            .lineSpacing(4)
+                            .font(.system(size: 16, weight: isAnomaly ? .medium : .regular))
+                            .foregroundStyle(isAnomaly ? Color.white : Color.white.opacity(0.35))
+                            .lineSpacing(2)
                             .multilineTextAlignment(.leading)
 
                         if !expanded && (isAnomaly || hasEvidence) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 if isAnomaly {
-                                    Circle().fill(Color.anomalyRed).frame(width: 6, height: 6)
+                                    Text("异常")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(accent)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .overlay(
+                                            Capsule().stroke(accent.opacity(0.60), lineWidth: 1)
+                                        )
                                 }
                                 if hasEvidence {
-                                    Text("[\(response!.evidences.count) 证据]")
-                                        .font(.mono(9)).foregroundStyle(Color.white.opacity(0.30))
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "paperclip")
+                                            .font(.system(size: 11))
+                                        Text("\(response!.evidences.count)")
+                                            .font(.system(size: 12))
+                                    }
+                                    .foregroundStyle(accent.opacity(0.80))
                                 }
                             }
                         }
                     }
+
                     Spacer()
-                    VStack(spacing: 4) {
-                        if isAnomaly && !expanded {
-                            Image(systemName: "exclamationmark.circle")
-                                .font(.system(size: 14)).foregroundStyle(Color.anomalyRed.opacity(0.60))
-                        }
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.20))
-                            .rotationEffect(.degrees(expanded ? 180 : 0))
-                            .padding(4)
-                            .background(Color.white.opacity(0.05))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
             }
             .buttonStyle(.plain)
 
-            // Expanded content
             if expanded {
-                expandedContent
+                expandedDetail
                     .transition(.opacity.combined(with: .move(edge: .top)))
+
+                // Thick closing line when expanded
+                Rectangle()
+                    .fill(isAnomaly ? accent.opacity(0.50) : Color.white.opacity(0.25))
+                    .frame(height: 2)
+            } else {
+                // Normal thin separator
+                Rectangle()
+                    .fill(Color.white.opacity(0.07))
+                    .frame(height: 1)
+                    .padding(.leading, 42)
             }
         }
-        .background(expanded ? Color.white.opacity(0.08) : Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(expanded ? Color.white.opacity(0.15) : Color.white.opacity(0.07)))
-        .shadow(color: expanded ? Color.black.opacity(0.40) : .clear, radius: 20, y: 8)
     }
 
     @ViewBuilder
-    private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Divider().background(Color.white.opacity(0.08))
+    private var expandedDetail: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
 
-            // Points
-            ForEach(question.points, id: \.self) { point in
-                HStack(alignment: .top, spacing: 12) {
-                    Circle().fill(Color.white.opacity(0.10)).frame(width: 4, height: 4).padding(.top, 6)
-                    Text(point)
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundStyle(Color.white.opacity(0.50))
-                        .lineSpacing(3)
-                }
-                .padding(12)
-                .background(Color.white.opacity(0.03))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-
-            // Status badge
-            HStack {
-                Text("记录定性").font(.mono(9, weight: .bold)).foregroundStyle(Color.white.opacity(0.20)).kerning(4)
-                Spacer()
-                Label(isAnomaly ? "标记为异常" : "标记为正常",
-                      systemImage: isAnomaly ? "flag" : "checkmark.circle")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(isAnomaly ? Color(hex: 0xF87171) : Color.white.opacity(0.30))
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(isAnomaly ? Color.anomalyRed.opacity(0.10) : Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(isAnomaly ? Color.anomalyRed.opacity(0.30) : Color.white.opacity(0.10)))
-            }
-
-            // Evidence thumbnails
-            if isAnomaly || hasEvidence, let evs = response?.evidences, !evs.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("线索存证").font(.mono(9, weight: .bold)).foregroundStyle(Color.white.opacity(0.20)).kerning(4)
-                    FlowLayout(spacing: 8) {
-                        ForEach(evs) { ev in
-                            ArchiveThumbnail(evidence: ev, passphrase: passphrase) {
-                                onTapEvidence(ev)
-                            }
-                        }
+            // Observation points
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(question.points, id: \.self) { point in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle()
+                            .fill(Color.white.opacity(0.20))
+                            .frame(width: 3, height: 3)
+                            .padding(.top, 7)
+                        Text(point)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.white.opacity(0.45))
+                            .lineSpacing(3)
                     }
                 }
             }
+            .padding(.horizontal, 20)
+
+            // Toggle
+            resultToggle
+                .padding(.horizontal, 20)
+
+            if isAnomaly {
+                evidenceSection
+                    .padding(.horizontal, 20)
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 24)
+        .padding(.bottom, 16)
+    }
+
+    private var resultToggle: some View {
+        HStack(spacing: 2) {
+            toggleOption(label: "未见异常", icon: "checkmark.circle",
+                         active: !isAnomaly, activeColor: Color(hex: 0x4ADE80)) {
+                if isAnomaly { onToggleResult() }
+            }
+            toggleOption(label: "发现异常", icon: "flag",
+                         active: isAnomaly, activeColor: accent) {
+                if !isAnomaly { onToggleResult() }
+            }
+        }
+        .padding(3)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08)))
+    }
+
+    private func toggleOption(label: String, icon: String, active: Bool, activeColor: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 12))
+                Text(label).font(.system(size: 13, weight: .medium))
+            }
+            .foregroundStyle(active ? activeColor : Color.white.opacity(0.25))
+            .frame(maxWidth: .infinity)
+            .frame(height: 34)
+            .background(active ? activeColor.opacity(0.12) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var evidenceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("线索存证")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.25))
+                    .kerning(1)
+                Spacer()
+                if isUploading {
+                    ProgressView().tint(accent).scaleEffect(0.75)
+                } else {
+                    HStack(spacing: 8) {
+                        uploadBtn("camera.fill", action: onCamera)
+                        uploadBtn("photo.on.rectangle", action: onPhotoPicker)
+                        RecordingButton(isRecording: isRecording, size: 32, action: onAudio)
+                    }
+                }
+            }
+
+            if hasEvidence, let evs = response?.evidences, !evs.isEmpty {
+                FlowLayout(spacing: 6) {
+                    ForEach(evs) { ev in
+                        ArchiveThumbnail(evidence: ev, passphrase: passphrase) {
+                            onTapEvidence(ev)
+                        }
+                    }
+                }
+            } else if !isUploading {
+                Text("暂无证据，点击右侧按钮上传")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.18))
+            }
+        }
+    }
+
+    private func uploadBtn(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.white.opacity(0.55))
+                .frame(width: 32, height: 32)
+                .background(Color.white.opacity(0.08))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
-// MARK: - Archive thumbnail (loads image from Supabase)
+// MARK: - Archive thumbnail
 
 struct ArchiveThumbnail: View {
     let evidence  : EvidenceItem
@@ -394,28 +569,27 @@ struct ArchiveThumbnail: View {
     let onTap     : () -> Void
 
     @State private var thumbData: Data?
-
     private var isAudio: Bool { evidence.type == .audio }
 
     var body: some View {
         Button(action: onTap) {
             ZStack {
                 if isAudio {
-                    Color(hex: 0x0A1A12)
-                        .overlay(Image(systemName: "mic").font(.system(size: 20)).foregroundStyle(Color.emerald))
+                    Color(hex: 0x0A1208)
+                        .overlay(Image(systemName: "mic").font(.system(size: 20))
+                            .foregroundStyle(Color(hex: 0x4ADE80)))
                 } else if let data = thumbData, let img = UIImage(data: data) {
                     Image(uiImage: img).resizable().scaledToFill()
                 } else {
                     Color.white.opacity(0.05)
-                        .overlay(Image(systemName: "photo").font(.system(size: 20)).foregroundStyle(Color.white.opacity(0.20)))
+                        .overlay(Image(systemName: "photo").font(.system(size: 20))
+                            .foregroundStyle(Color.white.opacity(0.20)))
                 }
             }
             .frame(width: 64, height: 64)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isAudio ? Color.emerald.opacity(0.40) : Color.white.opacity(0.15))
-            )
+            .overlay(RoundedRectangle(cornerRadius: 12)
+                .stroke(isAudio ? Color(hex: 0x4ADE80).opacity(0.40) : Color.white.opacity(0.15)))
         }
         .task {
             guard !isAudio, thumbData == nil else { return }
@@ -424,7 +598,7 @@ struct ArchiveThumbnail: View {
     }
 }
 
-// MARK: - Simple flow layout
+// MARK: - Flow layout
 
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8

@@ -77,7 +77,7 @@ enum EncryptionService {
     }
 
     private static func encryptBytes(key: SymmetricKey, data: Data) throws -> Data {
-        let nonce  = try AES.GCM.Nonce()
+        let nonce  = AES.GCM.Nonce()
         let sealed = try AES.GCM.seal(data, using: key, nonce: nonce)
 
         // Layout: IV(12) + ciphertext + tag(16) — matches Flutter/PointyCastle output

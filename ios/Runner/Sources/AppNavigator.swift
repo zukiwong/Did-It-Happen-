@@ -73,15 +73,19 @@ struct AppNavigator: View {
     }
 
     private func push(_ screen: AppScreen) {
-        withAnimation { stack.append(screen) }
+        var s = stack
+        s.append(screen)
+        withAnimation(.easeInOut(duration: 0.3)) { stack = s }
     }
 
     private func pop() {
         guard stack.count > 1 else { return }
-        withAnimation { stack.removeLast() }
+        var s = stack
+        s.removeLast()
+        withAnimation(.easeInOut(duration: 0.3)) { stack = s }
     }
 
     private func replaceWithSplash() {
-        withAnimation { stack = [.splash] }
+        withAnimation(.easeInOut(duration: 0.3)) { stack = [.splash] }
     }
 }

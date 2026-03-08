@@ -22,7 +22,7 @@ enum DeepSeekService {
         messages: [ChatMessage],
         onDelta: @escaping (String) -> Void
     ) async throws {
-        var body: [String: Any] = [
+        let body: [String: Any] = [
             "model":  "deepseek-chat",
             "stream": true,
             "messages": [["role": "system", "content": systemPrompt]] +

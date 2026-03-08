@@ -13,7 +13,7 @@ struct TraceChecklistScreen: View {
     @State private var isRecording  = false
     @State private var showCamera   = false
     @State private var showGallery  = false
-    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var selectedPhotos: [PhotosPickerItem] = []
 
     private var questions: [QuestionItem] {
         store.record?.entryType == "self" ? kSelfQuestions : kPartnerQuestions
@@ -32,33 +32,52 @@ struct TraceChecklistScreen: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        NavigationStack {
+          ZStack(alignment: .bottom) {
             Color(hex: 0x0A0A0A).ignoresSafeArea()
             ambientBackground
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.top, safeAreaTop)
-
-                questionCard
-                    .id(currentIndex)
-                    .transition(cardTransition)
-                    .animation(.spring(duration: 0.35), value: currentIndex)
-
-                Spacer()
-            }
+            questionCard
+                .id(currentIndex)
+                .transition(cardTransition)
+                .animation(.spring(duration: 0.35), value: currentIndex)
+                .frame(maxHeight: .infinity)
 
             bottomBar
-        }
-        .photosPicker(isPresented: $showGallery, selection: $selectedPhoto, matching: .images)
-        .onChange(of: selectedPhoto) { _, item in
-            Task { await handlePhotoPickerItem(item) }
-        }
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraView { url in
-                showCamera = false
-                if let url { Task { await uploadFile(url: url) } }
-            }
+          }
+          .navigationBarTitleDisplayMode(.inline)
+          .toolbar {
+              ToolbarItem(placement: .navigationBarLeading) {
+                  Button(action: onBack) {
+                      Image(systemName: "xmark")
+                          .font(.system(size: 15, weight: .medium))
+                          .foregroundStyle(Color.white.opacity(0.60))
+                          .padding(8)
+                          .contentShape(Circle())
+                  }
+                  .buttonStyle(.plain)
+              }
+              ToolbarItem(placement: .principal) {
+                  ScrubbableProgressView(
+                      current: $currentIndex,
+                      total:   questions.count,
+                      accentColor: Color.anomalyRed
+                  )
+                  .frame(width: 220)
+              }
+          }
+          .toolbarColorScheme(.dark, for: .navigationBar)
+          .photosPicker(isPresented: $showGallery, selection: $selectedPhotos, maxSelectionCount: 10, matching: .images)
+          .onChange(of: selectedPhotos) { _, items in
+              Task { await handlePhotoPickerItems(items) }
+          }
+          .fullScreenCover(isPresented: $showCamera) {
+              CameraView { url in
+                  showCamera = false
+                  if let url { Task { await uploadFile(url: url) } }
+              }
+              .ignoresSafeArea()
+          }
         }
     }
 
@@ -76,83 +95,55 @@ struct TraceChecklistScreen: View {
         }
     }
 
-    // MARK: - Top bar
-
-    private var topBar: some View {
-        HStack(spacing: 16) {
-            Button(action: handlePrev) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.60))
-                    .frame(width: 44, height: 44)
-            }
-
-            // Waveform progress
-            WaveformProgressView(
-                current: currentIndex + 1,
-                total:   questions.count,
-                accentColor: Color.anomalyRed
-            )
-
-            Text("\(currentIndex + 1)/\(questions.count)")
-                .font(.mono(10))
-                .foregroundStyle(Color.white.opacity(0.30))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
     // MARK: - Question card
 
     private var questionCard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 // Category + ID
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Text("#\(String(format: "%02d", current.id))")
-                        .font(.mono(9))
-                        .foregroundStyle(Color.white.opacity(0.20))
-                        .kerning(4)
-                    Text(current.category)
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.mono(13))
                         .foregroundStyle(Color.white.opacity(0.30))
-                        .kerning(4)
+                    Text(current.category)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.45))
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 14)
 
                 // Title
                 Text(current.title)
-                    .font(.system(size: 22, weight: .light))
-                    .foregroundStyle(Color.white.opacity(0.90))
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(Color.white)
                     .lineSpacing(6)
                     .padding(.bottom, 32)
 
                 // Subtitle
                 if let sub = current.subtitle {
                     Text(sub)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color(hex: 0xFF7D7D).opacity(0.80))
-                        .kerning(3)
-                        .padding(.bottom, 16)
+                        .kerning(2)
+                        .padding(.bottom, 14)
                 }
 
                 // Points
                 ForEach(current.points, id: \.self) { point in
                     HStack(alignment: .top, spacing: 12) {
                         Circle()
-                            .fill(Color.white.opacity(0.10))
-                            .frame(width: 4, height: 4)
-                            .padding(.top, 6)
+                            .fill(Color.anomalyRed.opacity(0.70))
+                            .frame(width: 5, height: 5)
+                            .padding(.top, 8)
                         Text(point)
-                            .font(.system(size: 13, weight: .light))
-                            .foregroundStyle(Color.white.opacity(0.50))
+                            .font(.system(size: 17, weight: .light))
+                            .foregroundStyle(Color.white.opacity(0.80))
                             .lineSpacing(4)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(Color.white.opacity(0.03))
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 16)
+                    .background(Color(hex: 0x1C1C1E))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.10)))
                     .padding(.bottom, 8)
                 }
 
@@ -160,19 +151,22 @@ struct TraceChecklistScreen: View {
                 if let tip = current.tip {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.circle")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.20))
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.anomalyRed)
                         Text(tip)
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.30))
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.anomalyRed)
                             .italic()
                     }
                     .padding(.top, 8)
                 }
             }
-            .padding(28)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 160)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .scrollContentBackground(.hidden)
     }
 
     private var cardTransition: AnyTransition {
@@ -190,7 +184,7 @@ struct TraceChecklistScreen: View {
                 // Expanded tool panel
                 if uploadCount > 0 {
                     Label("\(uploadCount) 个文件已添加", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(Color.emerald.opacity(0.60))
                 }
                 anomalyToolPanel
@@ -213,7 +207,7 @@ struct TraceChecklistScreen: View {
                     Button(action: handleNext) {
                         HStack {
                             Text(isLast ? "完成检查" : (isFlagged ? "已标记，下一题" : "未见异常"))
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundStyle(Color.white)
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14))
@@ -244,13 +238,19 @@ struct TraceChecklistScreen: View {
             Group {
                 toolButton(icon: "camera", label: "拍照",   busy: uploading || isRecording) { showCamera = true }
                 toolButton(icon: "photo",  label: "相册",   busy: uploading || isRecording) { showGallery = true }
-                toolButton(
-                    icon:  isRecording ? "stop.circle" : "mic",
-                    label: isRecording ? "停止" : "录音",
-                    busy:  uploading,
-                    highlight: isRecording
-                ) { Task { await handleAudio() } }
-                toolButton(icon: "flag", label: "标记", busy: uploading || isRecording) { handleFlag() }
+                // Recording button with live audio visualisation
+                VStack(spacing: 3) {
+                    RecordingButton(isRecording: isRecording, size: 40) {
+                        Task { await handleAudio() }
+                    }
+                    .opacity(uploading ? 0.4 : 1.0)
+                    .disabled(uploading)
+                    Text(isRecording ? "停止" : "录音")
+                        .font(.system(size: 10))
+                        .foregroundStyle(isRecording ? Color.anomalyRed : Color.white.opacity(0.50))
+                }
+                .frame(maxWidth: .infinity)
+                toolButton(icon: isFlagged ? "flag.fill" : "flag", label: isFlagged ? "已标记" : "标记", busy: uploading || isRecording, highlight: isFlagged) { handleFlag() }
             }
             .frame(maxWidth: .infinity)
 
@@ -332,14 +332,16 @@ struct TraceChecklistScreen: View {
         }
     }
 
-    private func handlePhotoPickerItem(_ item: PhotosPickerItem?) async {
-        guard let item else { return }
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString + ".jpg")
-        try? data.write(to: url)
-        await uploadFile(url: url)
-        selectedPhoto = nil
+    private func handlePhotoPickerItems(_ items: [PhotosPickerItem]) async {
+        guard !items.isEmpty else { return }
+        for item in items {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + ".jpg")
+            try? data.write(to: url)
+            await uploadFile(url: url)
+        }
+        selectedPhotos = []
     }
 
     private func uploadFile(url: URL) async {
@@ -358,8 +360,6 @@ struct TraceChecklistScreen: View {
         uploading = false
     }
 
-    // MARK: - Safe area helpers
-    private var safeAreaTop   : CGFloat { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.top    ?? 44 }
     private var safeAreaBottom: CGFloat { (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.bottom ?? 34 }
 }
 
@@ -371,15 +371,71 @@ struct WaveformProgressView: View {
     let accentColor : Color
 
     var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<total, id: \.self) { i in
-                let h: CGFloat = i < current ? 16 : 8
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(i < current ? accentColor : Color.white.opacity(0.15))
-                    .frame(width: 3, height: h)
-                    .animation(.spring(duration: 0.3).delay(Double(i) * 0.02), value: current)
+        GeometryReader { geo in
+            let spacing: CGFloat = 1
+            let barWidth = (geo.size.width - spacing * CGFloat(total - 1)) / CGFloat(total)
+            HStack(alignment: .bottom, spacing: spacing) {
+                ForEach(0..<total, id: \.self) { i in
+                    let isActive = i == current - 1
+                    let isPast   = i < current - 1
+                    let wave     = 4 + abs(sin(Double(i) * 0.8) * 12)
+                    let h: CGFloat = isActive ? 24 : (isPast ? 8 : CGFloat(wave))
+                    let color: Color = isActive ? accentColor
+                                     : isPast   ? Color(hex: 0xEF4444)
+                                     : Color.white.opacity(0.10)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(color)
+                        .frame(width: max(1, barWidth), height: h)
+                        .animation(.easeOut(duration: 0.3), value: current)
+                }
             }
         }
+        .frame(height: 24)
+    }
+}
+
+// MARK: - Scrubbable progress (drag to jump to any question)
+
+struct ScrubbableProgressView: View {
+    @Binding var current: Int
+    let total      : Int
+    let accentColor: Color
+
+    @GestureState private var isDragging = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let spacing: CGFloat = 1
+            let barWidth = (geo.size.width - spacing * CGFloat(total - 1)) / CGFloat(total)
+
+            HStack(alignment: .bottom, spacing: spacing) {
+                ForEach(0..<total, id: \.self) { i in
+                    let isActive = i == current
+                    let isPast   = i < current
+                    let wave     = 4 + abs(sin(Double(i) * 0.8) * 12)
+                    let h: CGFloat = isActive ? 24 : (isPast ? 8 : CGFloat(wave))
+                    let color: Color = isActive ? accentColor
+                                     : isPast   ? accentColor.opacity(0.45)
+                                     : Color.white.opacity(0.10)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(color)
+                        .frame(width: max(1, barWidth), height: h)
+                        .animation(.easeOut(duration: 0.2), value: current)
+                }
+            }
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .local)
+                    .onChanged { value in
+                        let idx = Int((value.location.x / geo.size.width) * CGFloat(total))
+                        let clamped = max(0, min(total - 1, idx))
+                        if clamped != current {
+                            withAnimation(.easeOut(duration: 0.2)) { current = clamped }
+                        }
+                    }
+            )
+        }
+        .frame(height: 24)
     }
 }
 
@@ -388,17 +444,17 @@ struct WaveformProgressView: View {
 struct CameraView: UIViewControllerRepresentable {
     let onCapture: (URL?) -> Void
 
+    func makeCoordinator() -> Coordinator { Coordinator(onCapture: onCapture) }
+
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType    = .camera
-        picker.delegate      = context.coordinator
         picker.allowsEditing = false
+        picker.delegate      = context.coordinator
         return picker
     }
 
-    func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(onCapture: onCapture) }
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let onCapture: (URL?) -> Void
@@ -406,7 +462,6 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            picker.dismiss(animated: true)
             guard let image = info[.originalImage] as? UIImage,
                   let data  = image.jpegData(compressionQuality: 0.8) else { onCapture(nil); return }
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jpg")
@@ -415,7 +470,6 @@ struct CameraView: UIViewControllerRepresentable {
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
             onCapture(nil)
         }
     }

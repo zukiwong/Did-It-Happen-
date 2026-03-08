@@ -23,20 +23,13 @@ struct SelfReflectionScreen: View {
     }
 
     var body: some View {
-        ZStack {
+        NavigationStack {
+          ZStack {
             Color(hex: 0x050505).ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Header
-                    HStack {
-                        Button(action: onBack) {
-                            Image(systemName: "chevron.left").font(.system(size: 20)).foregroundStyle(Color.white.opacity(0.60))
-                        }
-                        Spacer()
-                    }
-                    .padding(.top, safeAreaTop + 12)
-                    .padding(.bottom, 32)
+                    Spacer().frame(height: 8)
 
                     // Risk gauge
                     VStack(spacing: 16) {
@@ -46,7 +39,7 @@ struct SelfReflectionScreen: View {
                             .kerning(4)
 
                         Text(riskLevel)
-                            .font(.system(size: 40, weight: .ultraLight))
+                            .font(.system(size: 44, weight: .ultraLight))
                             .foregroundStyle(riskColor)
 
                         HStack(spacing: 4) {
@@ -59,7 +52,7 @@ struct SelfReflectionScreen: View {
                         .padding(.horizontal, 8)
 
                         Text("\(flaggedCount) / \(totalCount) 项符合")
-                            .font(.mono(11))
+                            .font(.mono(13))
                             .foregroundStyle(Color.white.opacity(0.40))
                     }
                     .frame(maxWidth: .infinity)
@@ -71,7 +64,7 @@ struct SelfReflectionScreen: View {
 
                     // Reflection text
                     Text("诚实面对自己是需要勇气的。\n无论结果如何，你都值得一个真实的答案。")
-                        .font(.system(size: 15, weight: .light))
+                        .font(.system(size: 17, weight: .light))
                         .foregroundStyle(Color.white.opacity(0.50))
                         .lineSpacing(6)
                         .padding(.bottom, 40)
@@ -80,10 +73,10 @@ struct SelfReflectionScreen: View {
                     Button(action: onChat) {
                         HStack {
                             Image(systemName: "bubble.left.and.bubble.right")
-                                .font(.system(size: 16))
+                                .font(.system(size: 17))
                                 .foregroundStyle(Color.black)
                             Text("和 AI 倾诉与梳理")
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 17, weight: .medium))
                                 .foregroundStyle(Color.black)
                         }
                         .frame(maxWidth: .infinity)
@@ -96,7 +89,7 @@ struct SelfReflectionScreen: View {
                     // Exit button
                     Button(action: onExit) {
                         Text("返回首页")
-                            .font(.system(size: 14))
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.40))
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -106,11 +99,18 @@ struct SelfReflectionScreen: View {
                 }
                 .padding(.horizontal, 28)
             }
+          }
+          .navigationBarTitleDisplayMode(.inline)
+          .toolbar {
+              ToolbarItem(placement: .navigationBarLeading) {
+                  Button(action: onBack) {
+                      Image(systemName: "chevron.left")
+                          .font(.system(size: 17, weight: .medium))
+                          .foregroundStyle(Color.white.opacity(0.60))
+                  }
+              }
+          }
+          .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .ignoresSafeArea()
-    }
-
-    private var safeAreaTop: CGFloat {
-        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.safeAreaInsets.top ?? 44
     }
 }
