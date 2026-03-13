@@ -3,11 +3,12 @@ import Observation
 
 @Observable
 class InvestigationStore {
-    var passphrase  : String?
-    var record      : InvestigationRecord?
-    var pendingFiles: [PendingFile] = []
-    var isBusy      = false
-    var error       : String?
+    var passphrase      : String?
+    var record          : InvestigationRecord?
+    var pendingFiles    : [PendingFile] = []
+    var isBusy          = false
+    var error           : String?
+    var selectedOptions : [String: String] = [:]   // itemId → selected point text
 
     // MARK: - Session setup
 
@@ -84,12 +85,17 @@ class InvestigationStore {
         }
     }
 
+    func recordSelectedOption(itemId: String, point: String) {
+        selectedOptions[itemId] = point
+    }
+
     func clear() {
-        passphrase   = nil
-        record       = nil
-        pendingFiles = []
-        isBusy       = false
-        error        = nil
+        passphrase      = nil
+        record          = nil
+        pendingFiles    = []
+        isBusy          = false
+        error           = nil
+        selectedOptions = [:]
     }
 
     // MARK: - Computed helpers

@@ -8,7 +8,7 @@ struct SelfReflectionScreen: View {
     @Environment(InvestigationStore.self) private var store
 
     private var flaggedCount: Int { store.record?.results.values.filter { $0 == "flagged" }.count ?? 0 }
-    private var totalCount  : Int { kSelfQuestions.count }
+    private var totalCount  : Int { store.record?.results.count ?? kSelfQuestions.count }
     private var riskScore   : Int {
         guard totalCount > 0 else { return 0 }
         return Int(Double(flaggedCount) / Double(totalCount) * 100)
@@ -38,6 +38,8 @@ struct SelfReflectionScreen: View {
                         .font(.system(size: 17, weight: .light))
                         .foregroundStyle(Color.white.opacity(0.50))
                         .lineSpacing(8)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.bottom, 40)
 
                     Button(action: onChat) {
@@ -128,7 +130,7 @@ struct SelfReflectionScreen: View {
                 // Progress bar with dot indicator
                 GeometryReader { geo in
                     let progress = CGFloat(riskScore) / 100.0
-                    let dotX = geo.size.width * progress
+                    let dotX = min(geo.size.width * progress, geo.size.width - 7)
 
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -139,7 +141,7 @@ struct SelfReflectionScreen: View {
                                 colors: [Color.white.opacity(0.40), accent],
                                 startPoint: .leading, endPoint: .trailing
                             ))
-                            .frame(width: dotX, height: 3)
+                            .frame(width: max(0, dotX), height: 3)
                         Circle()
                             .fill(accent)
                             .frame(width: 14, height: 14)

@@ -70,8 +70,32 @@ struct SanctuaryChatScreen: View {
           }
           .task {
               await storeService.loadProducts()
-              try? await Task.sleep(nanoseconds: 600_000_000)
-              messages.append(ChatMessage(role: "assistant", content: opener))
+              try? await Task.sleep(nanoseconds: 400_000_000)
+              // Generate opening message from AI based on questionnaire context
+              let openingMsg = ChatMessage(role: "assistant", content: "")
+              messages.append(openingMsg)
+              let msgId = openingMsg.id
+              isStreaming = true
+              var accumulated = ""
+              let triggerPrompt = "请根据来访者的背景信息，用温暖直接的方式开始对话。不要问「你愿意分享吗」，直接切入他们的状态。可以对他们选择的内容做出有深度的回应，帮助他们感到被理解。"
+              do {
+                  try await DeepSeekService.streamChat(
+                      messages: [ChatMessage(role: "user", content: triggerPrompt)],
+                      systemPrompt: systemPrompt
+                  ) { delta in
+                      accumulated += delta
+                      DispatchQueue.main.async {
+                          if let idx = self.messages.firstIndex(where: { $0.id == msgId }) {
+                              self.messages[idx] = ChatMessage(role: "assistant", content: accumulated, id: msgId)
+                          }
+                      }
+                  }
+              } catch {
+                  if let idx = messages.firstIndex(where: { $0.id == msgId }) {
+                      messages[idx] = ChatMessage(role: "assistant", content: opener, id: msgId)
+                  }
+              }
+              isStreaming = false
           }
         }
     }
@@ -168,18 +192,24 @@ struct SanctuaryChatScreen: View {
         let record = store.record
         let entryType = record?.entryType ?? ""
         let results = record?.results ?? [:]
+        let selectedOptions = store.selectedOptions
         let allQuestions = entryType == "self" ? kSelfQuestions : kPartnerQuestions
-        let flaggedTitles = allQuestions
-            .filter { results[String($0.id)] == "flagged" }
-            .map { $0.title }
+        let flaggedQuestions = allQuestions.filter { results[String($0.id)] == "flagged" }
 
         let checklistContext: String
-        if flaggedTitles.isEmpty {
+        if flaggedQuestions.isEmpty {
             checklistContext = ""
         } else {
-            let list = flaggedTitles.map { "- \($0)" }.joined(separator: "\n")
+            let list = flaggedQuestions.map { q -> String in
+                let itemId = String(q.id)
+                if let chosen = selectedOptions[itemId] {
+                    return "- \(q.title) → 用户选择了「\(chosen)」"
+                } else {
+                    return "- \(q.title) → 用户标记了「是」"
+                }
+            }.joined(separator: "\n")
             checklistContext = entryType == "self"
-                ? "\n\n【用户自我审视结果】用户在以下问题上选择了「是」，说明这些情况在他们身上存在：\n\(list)"
+                ? "\n\n【用户自我审视结果】用户完成了一份关系自评问卷，以下是他们有共鸣的部分：\n\(list)"
                 : "\n\n【用户排查结果】用户标记了伴侣存在以下异常行为：\n\(list)"
         }
 

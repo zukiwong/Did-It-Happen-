@@ -16,7 +16,8 @@ struct TraceArchiveScreen: View {
     @State private var selectedPhotos   : [PhotosPickerItem] = []
     @State private var isRecording      = false
     @State private var uploadingItemId  : String?
-    @State private var showEvidenceFullAlert = false
+    @State private var showEvidenceFullAlert  = false
+    @State private var showUploadErrorAlert   = false
 
     private var record    : InvestigationRecord? { store.record }
     private var passphrase: String               { store.passphrase ?? "" }
@@ -85,6 +86,11 @@ struct TraceArchiveScreen: View {
                 Button("知道了", role: .cancel) {}
             } message: {
                 Text("每份档案最多保存 \(EvidenceService.maxTotalEvidenceFiles) 个证据文件。")
+            }
+            .alert("上传失败", isPresented: $showUploadErrorAlert) {
+                Button("知道了", role: .cancel) {}
+            } message: {
+                Text("文件上传失败，请检查网络连接后重试。")
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { url in
@@ -337,6 +343,8 @@ struct TraceArchiveScreen: View {
             store.addEvidenceKey(itemId: itemId, fileKey: key)
             store.markResult(itemId: itemId, status: "flagged")
             withAnimation { hasChanges = true }
+        } else {
+            showUploadErrorAlert = true
         }
         uploadingItemId = nil
     }
