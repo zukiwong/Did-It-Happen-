@@ -34,13 +34,8 @@ enum DeepSeekService {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        print("[DeepSeek] sending to \(endpoint)")
-        let (bytes, response) = try await URLSession.shared.bytes(for: req)
-        if let http = response as? HTTPURLResponse {
-            print("[DeepSeek] HTTP status: \(http.statusCode)")
-        }
+        let (bytes, _) = try await URLSession.shared.bytes(for: req)
         for try await line in bytes.lines {
-            print("[DeepSeek] line: \(line)")
             guard line.hasPrefix("data: "),
                   let data = line.dropFirst(6).data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

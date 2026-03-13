@@ -250,7 +250,6 @@ struct SanctuaryChatScreen: View {
                 }
             }
         } catch {
-            print("DeepSeek error: \(error)")
             if let idx = messages.firstIndex(where: { $0.id == msgId }) {
                 messages[idx] = ChatMessage(role: "assistant", content: "网络异常，请重试。(\(error.localizedDescription))", id: msgId)
             }

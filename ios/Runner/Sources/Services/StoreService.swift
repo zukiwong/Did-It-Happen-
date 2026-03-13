@@ -26,20 +26,15 @@ final class StoreService: ObservableObject {
         errorMessage = nil
         defer { isLoadingProducts = false }
 
-        print("[StoreService] loadProducts called")
-        print("[StoreService] bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
         do {
             let ids: Set<String> = [Self.productID3000, Self.productID10000]
-            print("[StoreService] requesting product IDs: \(ids)")
             let fetched = try await Product.products(for: ids)
-            print("[StoreService] fetched \(fetched.count) products: \(fetched.map(\.id))")
             products = fetched.sorted { $0.price < $1.price }
 
             if fetched.isEmpty {
                 errorMessage = "未获取到任何商品。请确认当前 Scheme 的 StoreKit Configuration 已指向 Store.storekit，然后停止并重新运行 App。"
             }
         } catch {
-            print("[StoreService] loadProducts error: \(error)")
             errorMessage = "无法加载商品信息"
         }
     }
