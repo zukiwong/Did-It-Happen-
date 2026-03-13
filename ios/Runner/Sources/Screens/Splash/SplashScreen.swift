@@ -170,9 +170,9 @@ private struct SplashCanvas: View {
                 // Choice ambient
                 if content > 0 {
                     ZStack {
-                        BlurredCircle(color: Color(hex: 0x1A7A9A), size: w * 1.3, blur: 100, opacity: 0.90)
+                        BlurredCircle(color: Color(hex: 0xC05820), size: w * 1.3, blur: 100, opacity: 0.70)
                             .offset(x: -w * 0.25 - w * 0.55 + w/2, y: h * 0.5 - h * 0.05 - w * 0.55)
-                        BlurredCircle(color: Color(hex: 0x8B1530), size: w * 1.2, blur: 100, opacity: 0.90)
+                        BlurredCircle(color: Color(hex: 0xB03060), size: w * 1.2, blur: 100, opacity: 0.65)
                             .offset(x: w * 0.25 + w * 0.5 - w/2, y: -h * 0.05 - w * 0.5)
                     }
                     .opacity(content * 0.9)
@@ -211,7 +211,7 @@ private struct SplashCanvas: View {
                     HStack(spacing: 0) {
                         ZStack {
                             RadialGradient(
-                                colors: [Color(hex: 0x1A6A8E).opacity(pressedLeft ? 0.55 : 0), .clear],
+                                colors: [Color(hex: 0xC05820).opacity(pressedLeft ? 0.55 : 0), .clear],
                                 center: UnitPoint(x: 0.35, y: 0.5),
                                 startRadius: 0, endRadius: w * 0.7
                             )
@@ -232,7 +232,7 @@ private struct SplashCanvas: View {
 
                         ZStack {
                             RadialGradient(
-                                colors: [Color(hex: 0x6E1A2E).opacity(pressedRight ? 0.55 : 0), .clear],
+                                colors: [Color(hex: 0xB03060).opacity(pressedRight ? 0.55 : 0), .clear],
                                 center: UnitPoint(x: 0.65, y: 0.5),
                                 startRadius: 0, endRadius: w * 0.7
                             )
