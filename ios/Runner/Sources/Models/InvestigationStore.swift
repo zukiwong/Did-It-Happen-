@@ -94,6 +94,15 @@ class InvestigationStore {
 
     // MARK: - Computed helpers
 
+    var totalEvidenceCount: Int {
+        let uploaded = record?.evidences.values.reduce(0) { $0 + $1.count } ?? 0
+        return uploaded + pendingFiles.count
+    }
+
+    var isEvidenceFull: Bool {
+        totalEvidenceCount >= EvidenceService.maxTotalEvidenceFiles
+    }
+
     var isFlagged: (String) -> Bool {
         { [self] itemId in
             record?.results[itemId] == "flagged" ||

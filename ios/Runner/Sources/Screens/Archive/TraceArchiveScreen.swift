@@ -16,6 +16,7 @@ struct TraceArchiveScreen: View {
     @State private var selectedPhotos   : [PhotosPickerItem] = []
     @State private var isRecording      = false
     @State private var uploadingItemId  : String?
+    @State private var showEvidenceFullAlert = false
 
     private var record    : InvestigationRecord? { store.record }
     private var passphrase: String               { store.passphrase ?? "" }
@@ -80,6 +81,11 @@ struct TraceArchiveScreen: View {
                 }
             }
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .alert("证据已达上限", isPresented: $showEvidenceFullAlert) {
+                Button("知道了", role: .cancel) {}
+            } message: {
+                Text("每份档案最多保存 \(EvidenceService.maxTotalEvidenceFiles) 个证据文件。")
+            }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { url in
                     showCamera = false
@@ -321,6 +327,10 @@ struct TraceArchiveScreen: View {
     }
 
     private func uploadFile(url: URL, itemId: String) async {
+        guard !store.isEvidenceFull else {
+            showEvidenceFullAlert = true
+            return
+        }
         uploadingItemId = itemId
         let result = await EvidenceService.uploadEvidence(url: url, passphrase: passphrase, itemId: itemId)
         if case .success(let key) = result {

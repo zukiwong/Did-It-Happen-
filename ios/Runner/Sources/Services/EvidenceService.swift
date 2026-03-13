@@ -9,6 +9,9 @@ enum EvidenceService {
     private static let bucket = "evidence-files"
     private static var audioRecorder: AVAudioRecorder?
     private static var currentRecordingURL: URL?
+    static let maxRecordingSeconds: TimeInterval = 600  // 10 minutes
+    static let maxTotalEvidenceFiles = 50                // per record across all questions
+    private static var recordingTimer: Timer?
 
     // MARK: - Upload
 
@@ -66,7 +69,7 @@ enum EvidenceService {
 
         guard let recorder = try? AVAudioRecorder(url: tmpURL, settings: settings) else { return false }
         recorder.isMeteringEnabled = true
-        recorder.record()
+        recorder.record(forDuration: maxRecordingSeconds)
         audioRecorder        = recorder
         currentRecordingURL  = tmpURL
         return true

@@ -305,8 +305,9 @@ struct TraceReportScreen: View {
         saveError = nil
         store.setPassphrase(phrase)
 
-        // Upload pending files
+        // Upload pending files (respect total limit)
         for pending in store.pendingFiles {
+            guard !store.isEvidenceFull else { break }
             let result = await EvidenceService.uploadEvidence(url: pending.url, passphrase: phrase, itemId: pending.itemId)
             if case .success(let key) = result {
                 store.addEvidenceKey(itemId: pending.itemId, fileKey: key)
