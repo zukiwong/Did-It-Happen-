@@ -1,42 +1,46 @@
 import Foundation
 
-// MARK: - DeepSeek streaming chat service
+// MARK: - DeepSeek streaming chat service (proxied via Supabase Edge Function)
 
 struct ChatMessage: Identifiable {
-    let id      = UUID()
-    let role    : String   // "user" | "assistant"
-    let content : String
+    let id     : UUID
+    let role   : String   // "user" | "assistant"
+    let content: String
+
+    init(role: String, content: String, id: UUID = UUID()) {
+        self.id      = id
+        self.role    = role
+        self.content = content
+    }
 }
 
 enum DeepSeekService {
-    private static let endpoint = URL(string: "https://api.deepseek.com/chat/completions")!
-
-    private static let systemPrompt = """
-    你是一位专业的情感支持顾问，擅长帮助用户梳理情感困惑、分析关系问题。\
-    你的回答应当温暖、理性、不评判，引导用户思考自己真实的感受和需求。\
-    请使用简洁的中文回复，避免使用过多专业术语。
-    """
+    private static let endpoint = URL(string: "\(supabaseURL)/functions/v1/deepseek-chat")!
 
     /// Streams a response token by token. Yields each delta string.
     static func streamChat(
         messages: [ChatMessage],
+        systemPrompt prompt: String,
         onDelta: @escaping (String) -> Void
     ) async throws {
         let body: [String: Any] = [
-            "model":  "deepseek-chat",
-            "stream": true,
-            "messages": [["role": "system", "content": systemPrompt]] +
-                messages.map { ["role": $0.role, "content": $0.content] }
+            "systemPrompt": prompt,
+            "messages": messages.map { ["role": $0.role, "content": $0.content] }
         ]
 
         var req = URLRequest(url: endpoint)
         req.httpMethod = "POST"
-        req.setValue("Bearer \(deepSeekAPIKey)", forHTTPHeaderField: "Authorization")
+        req.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (bytes, _) = try await URLSession.shared.bytes(for: req)
+        print("[DeepSeek] sending to \(endpoint)")
+        let (bytes, response) = try await URLSession.shared.bytes(for: req)
+        if let http = response as? HTTPURLResponse {
+            print("[DeepSeek] HTTP status: \(http.statusCode)")
+        }
         for try await line in bytes.lines {
+            print("[DeepSeek] line: \(line)")
             guard line.hasPrefix("data: "),
                   let data = line.dropFirst(6).data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

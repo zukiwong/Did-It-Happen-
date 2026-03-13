@@ -1,12 +1,13 @@
 import SwiftUI
 
-enum AppScreen {
+enum AppScreen: Hashable {
     case splash
     case traceChecklist
     case traceReport
     case selfRiskCheck
     case selfReflection
     case sanctuary
+    case sanctuaryChat(categoryId: String, opener: String)
     case archiveAccess
     case archive
 }
@@ -62,7 +63,12 @@ struct AppNavigator: View {
             )
 
         case .sanctuary:
-            MindSanctuaryScreen(onBack: pop)
+            MindSanctuaryScreen(onBack: pop) { categoryId, opener in
+                push(.sanctuaryChat(categoryId: categoryId, opener: opener))
+            }
+
+        case .sanctuaryChat(let categoryId, let opener):
+            SanctuaryChatScreen(categoryId: categoryId, opener: opener, onBack: pop)
 
         case .archiveAccess:
             ArchiveAccessScreen(onBack: pop, onSuccess: { push(.archive) })

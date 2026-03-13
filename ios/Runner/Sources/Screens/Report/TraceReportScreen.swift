@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import StoreKit
 
 struct TraceReportScreen: View {
     let onBack: () -> Void
@@ -16,6 +17,8 @@ struct TraceReportScreen: View {
     private var record  : InvestigationRecord? { store.record }
     private var results : [String: String]     { record?.results ?? [:] }
     private var flaggedCount: Int { results.values.filter { $0 == "flagged" }.count }
+
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         NavigationStack {
@@ -59,6 +62,12 @@ struct TraceReportScreen: View {
               }
           }
           .toolbarColorScheme(.dark, for: .navigationBar)
+          .onAppear {
+              // Request review after user completes a checklist
+              DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                  requestReview()
+              }
+          }
         }
     }
 

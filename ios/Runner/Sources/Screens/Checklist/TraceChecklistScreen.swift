@@ -6,18 +6,16 @@ struct TraceChecklistScreen: View {
     let onNext: () -> Void
 
     @Environment(InvestigationStore.self) private var store
-    @State private var currentIndex = 0
-    @State private var anomalyMode  = false
-    @State private var direction    = 0    // 1 forward, -1 backward
-    @State private var uploading    = false
-    @State private var isRecording  = false
-    @State private var showCamera   = false
-    @State private var showGallery  = false
-    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var currentIndex   = 0
+    @State private var anomalyMode    = false
+    @State private var direction      = 0    // 1 forward, -1 backward
+    @State private var uploading      = false
+    @State private var isRecording    = false
+    @State private var showCamera     = false
+    @State private var showGallery    = false
+    @State private var selectedPhotos : [PhotosPickerItem] = []
+    @State private var questions      : [QuestionItem] = kPartnerQuestions
 
-    private var questions: [QuestionItem] {
-        store.record?.entryType == "self" ? kSelfQuestions : kPartnerQuestions
-    }
     private var current: QuestionItem { questions[currentIndex] }
     private var isLast : Bool { currentIndex == questions.count - 1 }
     private var itemId : String { "\(current.id)" }
@@ -63,10 +61,14 @@ struct TraceChecklistScreen: View {
                       total:   questions.count,
                       accentColor: Color.anomalyRed
                   )
-                  .frame(width: 220)
+                  .frame(width: 280)
+                  .padding(.leading, 24)
               }
           }
           .toolbarColorScheme(.dark, for: .navigationBar)
+          .task {
+              questions = await QuestionService.fetchPartnerQuestions()
+          }
           .photosPicker(isPresented: $showGallery, selection: $selectedPhotos, maxSelectionCount: 10, matching: .images)
           .onChange(of: selectedPhotos) { _, items in
               Task { await handlePhotoPickerItems(items) }

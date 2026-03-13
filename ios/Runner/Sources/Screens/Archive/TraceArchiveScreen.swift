@@ -6,6 +6,7 @@ struct TraceArchiveScreen: View {
 
     @Environment(InvestigationStore.self) private var store
     @State private var selectedGroup    : [EvidenceItem] = []
+    @State private var selectedIndex    : Int = 0
     @State private var hasChanges       = false
     @State private var isSaving         = false
 
@@ -96,7 +97,7 @@ struct TraceArchiveScreen: View {
         }
         .overlay {
             if !selectedGroup.isEmpty {
-                EvidencePreviewOverlay(items: selectedGroup, initialIndex: 0, passphrase: passphrase) {
+                EvidencePreviewOverlay(items: selectedGroup, initialIndex: selectedIndex, passphrase: passphrase) {
                     selectedGroup = []
                 }
                 .ignoresSafeArea()
@@ -225,7 +226,7 @@ struct TraceArchiveScreen: View {
                         uploadingItemId: uploadingItemId,
                         isRecording:     isRecording && captureItemId == qid,
                         accent:          accent,
-                        onTapEvidence:   { ev in selectedGroup = [ev] },
+                        onTapEvidence:   { ev, group in selectedGroup = group; selectedIndex = group.firstIndex(where: { $0.id == ev.id }) ?? 0 },
                         onToggleResult:  { toggleResult(itemId: qid) },
                         onCamera:        { captureItemId = qid; DispatchQueue.main.async { showCamera = true } },
                         onPhotoPicker:   { captureItemId = qid; DispatchQueue.main.async { showPhotoPicker = true } },
@@ -364,7 +365,7 @@ struct ArchiveRecordItem: View {
     let uploadingItemId : String?
     let isRecording     : Bool
     let accent          : Color
-    let onTapEvidence   : (EvidenceItem) -> Void
+    let onTapEvidence   : (EvidenceItem, [EvidenceItem]) -> Void
     let onToggleResult  : () -> Void
     let onCamera        : () -> Void
     let onPhotoPicker   : () -> Void
@@ -536,7 +537,7 @@ struct ArchiveRecordItem: View {
                 FlowLayout(spacing: 6) {
                     ForEach(evs) { ev in
                         ArchiveThumbnail(evidence: ev, passphrase: passphrase) {
-                            onTapEvidence(ev)
+                            onTapEvidence(ev, evs)
                         }
                     }
                 }

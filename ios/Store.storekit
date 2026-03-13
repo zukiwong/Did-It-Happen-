@@ -1,0 +1,49 @@
+{
+  "identifier" : "AE91E28E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "6.00",
+      "familySharable" : false,
+      "internalID" : "AE91E28F",
+      "localizations" : [
+        {
+          "description" : "获得 3000 字符的 AI 对话额度，用完可再次购买",
+          "displayName" : "对话额度包",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "com.zukiwong.didItHappen.tokens3000",
+      "referenceName" : "3000字符包",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "12.00",
+      "familySharable" : false,
+      "internalID" : "AE91E290",
+      "localizations" : [
+        {
+          "description" : "获得 10000 字符的 AI 对话额度，用完可再次购买",
+          "displayName" : "对话额度大包",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "com.zukiwong.didItHappen.tokens10000",
+      "referenceName" : "10000字符包",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_locale" : "zh_CN",
+    "_storefront" : "CHN"
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

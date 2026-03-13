@@ -7,8 +7,9 @@ struct SelfRiskCheckScreen: View {
     @Environment(InvestigationStore.self) private var store
     @State private var currentIndex = 0
     @State private var direction    = 0
+    @State private var questions    : [QuestionItem] = kSelfQuestions
+    @State private var isLoading    = true
 
-    private var questions: [QuestionItem] { kSelfQuestions }
     private var current  : QuestionItem   { questions[currentIndex] }
     private var isLast   : Bool           { currentIndex == questions.count - 1 }
     private var itemId   : String         { "\(current.id)" }
@@ -62,10 +63,16 @@ struct SelfRiskCheckScreen: View {
                       total:   questions.count,
                       accentColor: Color.white.opacity(0.60)
                   )
-                  .frame(width: 220)
+                  .frame(width: 280)
+                  .padding(.leading, 24)
               }
           }
           .toolbarColorScheme(.dark, for: .navigationBar)
+          .task {
+              let fetched = await QuestionService.fetchSelfQuestions()
+              questions  = fetched
+              isLoading  = false
+          }
         }
     }
 
@@ -76,7 +83,7 @@ struct SelfRiskCheckScreen: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(isPrimary ? Color.black : Color.white.opacity(0.80))
                 .frame(maxWidth: .infinity)
-                .frame(height: 64)
+                .frame(height: 72)
                 .background(isPrimary ? Color.white : Color.white.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(isPrimary ? Color.clear : Color.white.opacity(0.15)))
@@ -95,17 +102,17 @@ struct SelfRiskCheckScreen: View {
                 .padding(.bottom, 16)
 
                 Text(current.title)
-                    .font(.system(size: 24, weight: .light))
+                    .font(.system(size: 28, weight: .light))
                     .foregroundStyle(Color.white)
                     .lineSpacing(6)
                     .padding(.bottom, 32)
 
                 ForEach(current.points, id: \.self) { point in
                     HStack(alignment: .top, spacing: 12) {
-                        Circle().fill(Color.white.opacity(0.40)).frame(width: 5, height: 5).padding(.top, 7)
-                        Text(point).font(.system(size: 15, weight: .light)).foregroundStyle(Color.white.opacity(0.80)).lineSpacing(4)
+                        Circle().fill(Color.white.opacity(0.40)).frame(width: 5, height: 5).padding(.top, 8)
+                        Text(point).font(.system(size: 17, weight: .light)).foregroundStyle(Color.white.opacity(0.80)).lineSpacing(4)
                     }
-                    .padding(.vertical, 12).padding(.horizontal, 16)
+                    .padding(.vertical, 14).padding(.horizontal, 16)
                     .background(Color(hex: 0x1C1C1E))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.10)))
