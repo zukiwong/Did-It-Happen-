@@ -26,18 +26,27 @@ enum QuestionService {
 
     private static func fetch(remoteURL: URL, cacheKey: String, fallback: [QuestionItem]) async -> [QuestionItem] {
         if let remote = await fetchRemote(url: remoteURL) {
+            print("[QuestionService] loaded \(remote.count) questions from REMOTE: \(remoteURL.lastPathComponent)")
             persist(remote, key: cacheKey)
             return remote
         }
-        if let cached = loadCached(key: cacheKey) { return cached }
+        if let cached = loadCached(key: cacheKey) {
+            print("[QuestionService] remote failed, loaded \(cached.count) questions from CACHE: \(cacheKey)")
+            return cached
+        }
+        print("[QuestionService] using FALLBACK for \(cacheKey), count: \(fallback.count)")
         return fallback
     }
 
     // MARK: - Private
 
     private static func fetchRemote(url: URL) async -> [QuestionItem]? {
-        guard let (data, response) = try? await URLSession.shared.data(from: url),
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "t", value: "\(Int(Date().timeIntervalSince1970 / 3600))")]
+        guard let bustedURL = components.url,
+              let (data, response) = try? await URLSession.shared.data(from: bustedURL),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        print("[QuestionService] fetched \(data.count) bytes from \(url.lastPathComponent)")
         return decode(data)
     }
 
